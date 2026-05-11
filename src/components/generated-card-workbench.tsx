@@ -7,7 +7,11 @@ import type { MarketCard } from "@/lib/market-card";
 const sampleSource =
   "정부가 AI 기본법 시행령과 고영향 AI 기준을 6월 말까지 공개하는 방안을 검토하고 있다.";
 
-export function GeneratedCardWorkbench() {
+interface GeneratedCardWorkbenchProps {
+  onCardGenerated?: (card: MarketCard) => void;
+}
+
+export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkbenchProps) {
   const [sourceText, setSourceText] = useState(sampleSource);
   const [sourceUrl, setSourceUrl] = useState("https://example.com/kr/ai-basic-act-update");
   const [categoryHint, setCategoryHint] = useState("AI Policy");
@@ -54,6 +58,7 @@ export function GeneratedCardWorkbench() {
 
       setActiveCard(body.card);
       setGeneratedCards(body.generatedCards ?? [body.card]);
+      onCardGenerated?.(body.card);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown generation error");
     } finally {
@@ -64,7 +69,7 @@ export function GeneratedCardWorkbench() {
   const visibleCard = activeCard ?? generatedCards[0] ?? null;
 
   return (
-    <section className="rounded-3xl border border-cyan-300/20 bg-cyan-300/[0.06] p-6 shadow-2xl shadow-cyan-950/20">
+    <section id="live-pipeline" className="rounded-3xl border border-cyan-300/20 bg-cyan-300/[0.06] p-6 shadow-2xl shadow-cyan-950/20 scroll-mt-6">
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">
@@ -73,6 +78,9 @@ export function GeneratedCardWorkbench() {
           <h2 className="mt-2 text-3xl font-semibold text-white">
             Generate a resolution-ready Market Card from local-language input
           </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-400">
+            "Resolution-ready" means the card already includes the binary question, end date, official sources, and edge cases validators need.
+          </p>
         </div>
         <p className="max-w-xl text-sm leading-6 text-slate-400">
           Deterministic local adapter for demo reliability today; LLM adapter boundary is

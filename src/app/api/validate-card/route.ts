@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getDashboardMetrics } from "../../../lib/market-card";
 import { findCard, listAllCards, updateCard } from "../../../lib/market-store";
 import { applyValidationAction, getValidatorMetrics } from "../../../lib/validation-workflow";
 import type { ValidationVerdict } from "../../../lib/market-card";
@@ -16,7 +17,11 @@ const allowedVerdicts: ValidationVerdict[] = ["APPROVE", "REJECT", "NEEDS_EDIT"]
 
 export async function GET() {
   const cards = listAllCards();
-  return NextResponse.json({ cards, metrics: getValidatorMetrics(cards) });
+  return NextResponse.json({
+    cards,
+    metrics: getValidatorMetrics(cards),
+    dashboardMetrics: getDashboardMetrics(cards),
+  });
 }
 
 export async function POST(request: Request) {
@@ -45,6 +50,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "card not found" }, { status: 404 });
   }
 
+  if (card.trace.arcTxHash || card.validations.some((validation) => validation.rewardTxHash)) {
+    return NextResponse.json(
+      { error: "card already settled", message: "Create a revised Market Card instead of changing a settled proof." },
+      { status: 409 },
+    );
+  }
+
   const updatedCard = updateCard(
     applyValidationAction({
       card,
@@ -56,5 +68,10 @@ export async function POST(request: Request) {
   );
   const cards = listAllCards();
 
-  return NextResponse.json({ card: updatedCard, cards, metrics: getValidatorMetrics(cards) });
+  return NextResponse.json({
+    card: updatedCard,
+    cards,
+    metrics: getValidatorMetrics(cards),
+    dashboardMetrics: getDashboardMetrics(cards),
+  });
 }

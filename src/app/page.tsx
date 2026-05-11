@@ -1,5 +1,4 @@
-import { GeneratedCardWorkbench } from "@/components/generated-card-workbench";
-import { ValidatorBoard } from "@/components/validator-board";
+import { MarketCardDemo } from "@/components/market-card-demo";
 import {
   getDashboardMetrics,
   getFeaturedMarketCard,
@@ -103,6 +102,27 @@ export default function Home() {
               events into resolution-ready prediction market proposals, then
               coordinates human validators with USDC rewards and Arc trace logs.
             </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a
+                href="#live-pipeline"
+                className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
+              >
+                Try live pipeline
+              </a>
+              <a
+                href="#validator-workflow"
+                className="rounded-xl border border-white/15 bg-white/[0.06] px-5 py-3 text-sm font-bold text-white transition hover:bg-white/[0.1]"
+              >
+                Review validator flow
+              </a>
+            </div>
+            <nav className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-slate-300" aria-label="Demo sections">
+              <a href="#live-metrics" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Live metrics</a>
+              <a href="#live-pipeline" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Generate</a>
+              <a href="#validator-workflow" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Validate</a>
+              <a href="#agent-workflow" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Agent workflow</a>
+              <a href="#seed-cards" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Seed cards</a>
+            </nav>
           </div>
           <div className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-5 text-sm text-cyan-100 md:w-72">
             <p className="font-semibold text-cyan-200">Core thesis</p>
@@ -130,22 +150,9 @@ export default function Home() {
           ))}
         </section>
 
-        <section className="grid gap-4 md:grid-cols-5">
-          <ScorePill label="Generated cards" value={metrics.generated} />
-          <ScorePill label="Validated" value={metrics.validated} />
-          <ScorePill label="Arc traces" value={metrics.arcTracesCommitted} />
-          <ScorePill label="Avg final score" value={metrics.averageFinalScore} />
-          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4">
-            <p className="text-2xl font-bold text-white">{metrics.rewardsPaidUsdc.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-emerald-200">testnet USDC rewards</p>
-          </div>
-        </section>
+        <MarketCardDemo initialMetrics={metrics} />
 
-        <GeneratedCardWorkbench />
-
-        <ValidatorBoard />
-
-        <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-black/30">
+        <section id="agent-workflow" className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-black/30">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-300">
@@ -292,7 +299,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+        <section id="seed-cards" className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">

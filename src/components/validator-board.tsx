@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { MarketCard, ValidationVerdict } from "@/lib/market-card";
+import type { DashboardMetrics, MarketCard, ValidationVerdict } from "@/lib/market-card";
 import type { ArcTraceReceipt, RewardReceipt } from "@/lib/settlement-adapters";
 import type { ValidatorMetrics } from "@/lib/validation-workflow";
 
@@ -20,13 +20,44 @@ const verdictStyles: Record<ValidationVerdict, string> = {
   REJECT: "bg-rose-300 text-slate-950 hover:bg-rose-200",
 };
 
+function hasSettlementProof(card: MarketCard): boolean {
+  return Boolean(card.trace.arcTxHash || card.validations.some((validation) => validation.rewardTxHash));
+}
+
+function computeDashboardMetricsFromCards(cards: MarketCard[]): DashboardMetrics {
+  const validated = cards.filter((card) => card.validations.length > 0).length;
+  const arcTracesCommitted = cards.filter((card) => card.trace.arcTxHash).length;
+  const rewardsPaidUsdc = cards.reduce(
+    (sum, card) => sum + card.validations.reduce((validationSum, validation) => validationSum + (validation.rewardTxHash ? validation.rewardUsdc : 0), 0),
+    0,
+  );
+  const averageFinalScore = cards.length
+    ? Math.round(cards.reduce((sum, card) => sum + card.scores.final, 0) / cards.length)
+    : 0;
+
+  return {
+    generated: cards.length,
+    validated,
+    rejected: cards.filter((card) => card.status === "REJECTED").length,
+    rewardsPaidUsdc: Number(rewardsPaidUsdc.toFixed(2)),
+    arcTracesCommitted,
+    averageFinalScore,
+  };
+}
+
 interface SettlementResponse {
   card: MarketCard;
   traceReceipt: ArcTraceReceipt;
   rewardReceipts: RewardReceipt[];
 }
 
-export function ValidatorBoard() {
+interface ValidatorBoardProps {
+  refreshToken?: number;
+  selectedCardId?: string | null;
+  onDashboardMetricsChange?: (metrics: DashboardMetrics) => void;
+}
+
+export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSelectedCardId, onDashboardMetricsChange }: ValidatorBoardProps) {
   const [cards, setCards] = useState<MarketCard[]>([]);
   const [metrics, setMetrics] = useState<ValidatorMetrics>(defaultMetrics);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -42,12 +73,22 @@ export function ValidatorBoard() {
 
     fetch("/api/validate-card")
       .then((response) => response.json())
-      .then((body: { cards?: MarketCard[]; metrics?: ValidatorMetrics }) => {
+      .then((body: { cards?: MarketCard[]; metrics?: ValidatorMetrics; dashboardMetrics?: DashboardMetrics }) => {
         if (!isMounted) return;
         const boardCards = body.cards ?? [];
         setCards(boardCards);
         setMetrics(body.metrics ?? defaultMetrics);
-        setSelectedCardId(boardCards.find((card) => card.status !== "APPROVED")?.id ?? boardCards[0]?.id ?? null);
+        if (body.dashboardMetrics) onDashboardMetricsChange?.(body.dashboardMetrics);
+        setSelectedCardId((currentSelectedCardId) => {
+          const requestedCard = requestedSelectedCardId
+            ? boardCards.find((card) => card.id === requestedSelectedCardId)
+            : null;
+          if (requestedCard) return requestedCard.id;
+          if (currentSelectedCardId && boardCards.some((card) => card.id === currentSelectedCardId)) {
+            return currentSelectedCardId;
+          }
+          return boardCards.find((card) => card.status !== "APPROVED")?.id ?? boardCards[0]?.id ?? null;
+        });
       })
       .catch(() => {
         if (!isMounted) return;
@@ -57,9 +98,11 @@ export function ValidatorBoard() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshToken, requestedSelectedCardId, onDashboardMetricsChange]);
 
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
+  const selectedCardIsSettled = selectedCard ? hasSettlementProof(selectedCard) : false;
+  const selectedCardSettlement = settlement?.card.id === selectedCard?.id ? settlement : null;
 
   async function submitVerdict(verdict: ValidationVerdict) {
     if (!selectedCard) return;
@@ -87,6 +130,7 @@ export function ValidatorBoard() {
 
       setCards(body.cards ?? []);
       setMetrics(body.metrics ?? defaultMetrics);
+      if (body.dashboardMetrics) onDashboardMetricsChange?.(body.dashboardMetrics);
       setSelectedCardId(body.card.id);
       setSettlement(null);
       setEditedQuestion("");
@@ -117,6 +161,7 @@ export function ValidatorBoard() {
 
       setSettlement(body as SettlementResponse);
       setCards((currentCards) => currentCards.map((card) => (card.id === body.card.id ? body.card : card)));
+      onDashboardMetricsChange?.(computeDashboardMetricsFromCards(cards.map((card) => (card.id === body.card.id ? body.card : card))));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown settlement error");
     } finally {
@@ -183,6 +228,11 @@ export function ValidatorBoard() {
                 <span className="rounded-full bg-slate-300/15 px-3 py-1 text-xs font-semibold text-slate-200">
                   {selectedCard.status}
                 </span>
+                {selectedCardIsSettled ? (
+                  <span className="rounded-full bg-cyan-300/15 px-3 py-1 text-xs font-semibold text-cyan-100">
+                    Settled proof locked
+                  </span>
+                ) : null}
               </div>
               <h3 className="mt-4 text-2xl font-semibold leading-8 text-white">{selectedCard.question}</h3>
               <p className="mt-3 text-sm leading-6 text-slate-400">{selectedCard.source.summaryEn}</p>
@@ -214,7 +264,7 @@ export function ValidatorBoard() {
                   <button
                     key={verdict}
                     type="button"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || selectedCardIsSettled}
                     onClick={() => submitVerdict(verdict)}
                     className={`rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:bg-slate-500 ${verdictStyles[verdict]}`}
                   >
@@ -222,6 +272,11 @@ export function ValidatorBoard() {
                   </button>
                 ))}
               </div>
+              {selectedCardIsSettled ? (
+                <p className="mt-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] px-4 py-3 text-sm leading-6 text-cyan-100">
+                  This card already has settlement proof. Create a revised card for changes instead of overwriting validator history.
+                </p>
+              ) : null}
               {error ? <p className="mt-3 text-sm text-rose-200">{error}</p> : null}
 
               <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4">
@@ -236,7 +291,7 @@ export function ValidatorBoard() {
                   </div>
                   <button
                     type="button"
-                    disabled={isSettling || selectedCard.status !== "APPROVED"}
+                    disabled={isSettling || selectedCard.status !== "APPROVED" || selectedCardIsSettled}
                     onClick={settleCard}
                     className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
                   >
@@ -244,12 +299,12 @@ export function ValidatorBoard() {
                   </button>
                 </div>
                 <div className="mt-4 grid gap-3 text-xs md:grid-cols-2">
-                  <ReceiptLine label="Trace hash" value={settlement?.traceReceipt.traceHash ?? selectedCard.trace.traceHash} />
-                  <ReceiptLine label="Arc tx" value={settlement?.traceReceipt.txHash ?? selectedCard.trace.arcTxHash} />
-                  <ReceiptLine label="Arc network" value={settlement?.traceReceipt.network} />
+                  <ReceiptLine label="Trace hash" value={selectedCardSettlement?.traceReceipt.traceHash ?? selectedCard.trace.traceHash} />
+                  <ReceiptLine label="Arc tx" value={selectedCardSettlement?.traceReceipt.txHash ?? selectedCard.trace.arcTxHash} />
+                  <ReceiptLine label="Arc network" value={selectedCardSettlement?.traceReceipt.network ?? (selectedCard.trace.arcTxHash ? "arc-testnet-mock" : undefined)} />
                   <ReceiptLine
                     label="Reward tx"
-                    value={settlement?.rewardReceipts[0]?.txHash ?? selectedCard.validations.find((validation) => validation.rewardTxHash)?.rewardTxHash}
+                    value={selectedCardSettlement?.rewardReceipts[0]?.txHash ?? selectedCard.validations.find((validation) => validation.rewardTxHash)?.rewardTxHash}
                   />
                 </div>
               </div>
