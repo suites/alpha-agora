@@ -84,8 +84,7 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
           </p>
         </div>
         <p className="max-w-xl text-sm leading-6 text-slate-400">
-          Deterministic local adapter for demo reliability today; LLM adapter boundary is
-          isolated behind the same generator interface.
+          LangGraph orchestrates source reading, drafting, critique, and revision; the draft node can use Gemini or deterministic fallback behind the same graph interface.
         </p>
       </div>
 
