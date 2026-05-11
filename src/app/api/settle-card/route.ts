@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { findCard, updateCard } from "../../../lib/market-store";
+import { findCardPersisted, updateCardPersisted } from "../../../lib/market-store";
 import { getProviderPreflight } from "../../../lib/provider-env";
 import { isProviderExecutionError } from "../../../lib/provider-status";
 import { settleValidatedCardWithProviders } from "../../../lib/settlement-adapters";
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "cardId is required" }, { status: 400 });
   }
 
-  const card = findCard(payload.cardId);
+  const card = await findCardPersisted(payload.cardId);
   if (!card) {
     return NextResponse.json({ error: "card not found" }, { status: 404 });
   }
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to settle card" }, { status: 502 });
   }
 
-  updateCard(result.card);
+  await updateCardPersisted(result.card);
 
   return NextResponse.json(result);
 }

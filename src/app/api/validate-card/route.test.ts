@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GET, POST } from "./route";
 import { POST as generateCard } from "../generate-card/route";
-import { findCard, updateCard } from "../../../lib/market-store";
+import { findCardPersisted, updateCardPersisted } from "../../../lib/market-store";
 
 describe("/api/validate-card", () => {
   it("returns 404 for an unknown card", async () => {
@@ -92,9 +92,9 @@ describe("/api/validate-card", () => {
         }),
       }),
     );
-    const approvedCard = findCard(generatedBody.card.id);
+    const approvedCard = await findCardPersisted(generatedBody.card.id);
     if (!approvedCard) throw new Error("approved card missing");
-    updateCard({
+    await updateCardPersisted({
       ...approvedCard,
       trace: {
         traceHash: "sample-trace-lock-test",

@@ -18,7 +18,10 @@ interface CircleWalletsModule {
       amount: string[];
       fee: { type: "level"; config: { feeLevel: "LOW" | "MEDIUM" | "HIGH" } };
       idempotencyKey: string;
-    }) => Promise<{ data?: { id?: string; transactionId?: string; txHash?: string } }>;
+    }) => Promise<{ data?: { id?: string; transactionId?: string; txHash?: string; state?: string } }>;
+    getTransaction?: (input: { id: string }) => Promise<{
+      data?: { transaction?: { id?: string; state?: string; txHash?: string } };
+    }>;
   };
 }
 
@@ -63,7 +66,7 @@ export async function settleCircleRewards(
 
     receipts.push({
       network: env.circleEnv === "production" ? "circle-wallets-production" : "circle-wallets-sandbox",
-      status: "SUCCESS",
+      status: normalizeCircleTransactionState(response.data?.state),
       validator: validation.validator,
       amountUsdc: validation.rewardUsdc,
       txHash: providerId,
@@ -72,6 +75,47 @@ export async function settleCircleRewards(
   }
 
   return receipts;
+}
+
+export function normalizeCircleTransactionState(state: string | undefined): RewardReceipt["status"] {
+  switch ((state ?? "CONFIRMED").toUpperCase()) {
+    case "CONFIRMED":
+    case "COMPLETE":
+    case "COMPLETED":
+      return "SUCCESS";
+    case "PENDING":
+    case "INITIATED":
+    case "QUEUED":
+      return "PENDING";
+    case "FAILED":
+    case "CANCELED":
+    case "CANCELLED":
+      return "FAILED";
+    default:
+      return "PENDING";
+  }
+}
+
+export async function getCircleTransactionStatus(
+  transactionId: string,
+  env: ProviderEnv = getProviderEnv(),
+): Promise<{ id: string; status: RewardReceipt["status"]; txHash?: string; rawState?: string } | undefined> {
+  if (!shouldUseCircle(env) || !env.circleApiKey || !env.circleEntitySecret) return undefined;
+  const { initiateDeveloperControlledWalletsClient } = await importCircleWallets();
+  const client = initiateDeveloperControlledWalletsClient({
+    apiKey: env.circleApiKey,
+    entitySecret: env.circleEntitySecret,
+    baseUrl: env.circleBaseUrl,
+  });
+  if (!client.getTransaction) return { id: transactionId, status: "PENDING" };
+  const response = await client.getTransaction({ id: transactionId });
+  const transaction = response.data?.transaction;
+  return {
+    id: transaction?.id ?? transactionId,
+    status: normalizeCircleTransactionState(transaction?.state),
+    txHash: transaction?.txHash,
+    rawState: transaction?.state,
+  };
 }
 
 function assertRewardIsAllowed(amountUsdc: number, env: ProviderEnv): void {

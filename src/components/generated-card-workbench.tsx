@@ -84,7 +84,7 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
             Generate a resolution-ready Market Card from local-language input
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-400">
-            "Resolution-ready" means the card already includes the binary question, end date, official sources, and edge cases validators need.
+            &quot;Resolution-ready&quot; means the card already includes the binary question, end date, official sources, and edge cases validators need.
           </p>
         </div>
         <p className="max-w-xl text-sm leading-6 text-slate-400">
@@ -169,7 +169,11 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
                   <p className="mt-2 truncate text-sm font-semibold text-emerald-100">
                     {visibleCard.trace.traceHash}
                   </p>
-                  <p className="mt-2 text-xs leading-5 text-slate-500">Arc commit remains pending until validator approval.</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    {visibleCard.trace.arcTxHash
+                      ? `Arc committed on ${visibleCard.trace.arcNetwork ?? "configured network"}.`
+                      : "Arc commit remains pending until validator approval."}
+                  </p>
                 </div>
               </div>
               <div className="mt-5 space-y-2">

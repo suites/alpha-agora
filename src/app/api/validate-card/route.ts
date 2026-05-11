@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getDashboardMetrics } from "../../../lib/market-card";
-import { findCard, listAllCards, updateCard } from "../../../lib/market-store";
+import { readSessionFromCookieHeader } from "../../../lib/auth-session";
+import { findCardPersisted, listAllCardsPersisted, updateCardPersisted } from "../../../lib/market-store";
 import { applyValidationAction, getValidatorMetrics } from "../../../lib/validation-workflow";
 import type { ValidationVerdict } from "../../../lib/market-card";
 
@@ -16,7 +17,7 @@ interface ValidateCardPayload {
 const allowedVerdicts: ValidationVerdict[] = ["APPROVE", "REJECT", "NEEDS_EDIT"];
 
 export async function GET() {
-  const cards = listAllCards();
+  const cards = await listAllCardsPersisted();
   return NextResponse.json({
     cards,
     metrics: getValidatorMetrics(cards),
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "comment is required" }, { status: 400 });
   }
 
-  const card = findCard(payload.cardId);
+  const card = await findCardPersisted(payload.cardId);
   if (!card) {
     return NextResponse.json({ error: "card not found" }, { status: 404 });
   }
@@ -71,16 +72,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const updatedCard = updateCard(
+  const session = await readSessionFromCookieHeader(request.headers.get("cookie"));
+  const validatorName = session ? `${session.name} (${session.email})` : (payload.validator ?? "AnonymousValidator");
+
+  const updatedCard = await updateCardPersisted(
     applyValidationAction({
       card,
-      validator: payload.validator ?? "AnonymousValidator",
+      validator: validatorName,
       verdict: payload.verdict,
       comment: payload.comment,
       editedQuestion: payload.editedQuestion,
     }),
   );
-  const cards = listAllCards();
+  const cards = await listAllCardsPersisted();
 
   return NextResponse.json({
     card: updatedCard,

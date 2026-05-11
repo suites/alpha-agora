@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { buildArcExplorerUrl } from "@/lib/arc-explorer";
 import type { DashboardMetrics, MarketCard, ValidationVerdict } from "@/lib/market-card";
 import type { ArcTraceReceipt, RewardReceipt } from "@/lib/settlement-adapters";
 import type { ValidatorMetrics } from "@/lib/validation-workflow";
@@ -65,6 +66,11 @@ interface ValidatorBoardProps {
   onDashboardMetricsChange?: (metrics: DashboardMetrics) => void;
 }
 
+interface AuthSessionResponse {
+  authenticated: boolean;
+  session?: { email: string; name: string; picture?: string; provider: "google" };
+}
+
 export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSelectedCardId, onDashboardMetricsChange }: ValidatorBoardProps) {
   const [cards, setCards] = useState<MarketCard[]>([]);
   const [metrics, setMetrics] = useState<ValidatorMetrics>(defaultMetrics);
@@ -74,6 +80,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
   const [error, setError] = useState<string | null>(null);
   const [settlement, setSettlement] = useState<SettlementResponse | null>(null);
   const [preflight, setPreflight] = useState<SettlementPreflight | null>(null);
+  const [auth, setAuth] = useState<AuthSessionResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSettling, setIsSettling] = useState(false);
 
@@ -134,11 +141,28 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/auth/google?action=session")
+      .then((response) => response.json())
+      .then((body: AuthSessionResponse) => {
+        if (isMounted) setAuth(body);
+      })
+      .catch(() => {
+        if (isMounted) setAuth({ authenticated: false });
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
   const selectedCardIsSettled = selectedCard ? hasSettlementProof(selectedCard) : false;
   const selectedCardIsFinalized = selectedCard ? selectedCard.validations.length > 0 : false;
   const settlementBlockedByPreflight = preflight ? !preflight.settlementPossible : false;
   const selectedCardSettlement = settlement?.card.id === selectedCard?.id ? settlement : null;
+  const arcTxHash = selectedCardSettlement?.traceReceipt.txHash ?? selectedCard?.trace.arcTxHash;
+  const arcExplorerUrl = buildArcExplorerUrl(process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app", arcTxHash);
 
   async function submitVerdict(verdict: ValidationVerdict) {
     if (!selectedCard) return;
@@ -153,7 +177,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cardId: selectedCard.id,
-          validator: "HackathonValidator",
+          validator: auth?.session?.name ?? "HackathonValidator",
           verdict,
           comment: verdictComment,
           editedQuestion: editedQuestion || undefined,
@@ -216,6 +240,22 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
           <h2 className="mt-2 text-3xl font-semibold text-white">
             Approve, reject, or request edits before reward settlement
           </h2>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            {auth?.authenticated ? (
+              <>
+                <span className="rounded-full border border-emerald-300/30 bg-emerald-300/[0.08] px-3 py-1 text-emerald-100">
+                  Google validator: {auth.session?.name}
+                </span>
+                <a className="text-slate-400 underline decoration-slate-500 underline-offset-4" href="/api/auth/google?action=logout">
+                  Sign out
+                </a>
+              </>
+            ) : (
+              <a className="rounded-full border border-white/15 bg-white/[0.05] px-3 py-1 font-semibold text-white hover:bg-white/[0.09]" href="/api/auth/google">
+                Sign in with Google for validator identity
+              </a>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-5 gap-2 text-center text-xs sm:min-w-[560px]">
           <Metric label="Approved" value={metrics.approved} />
@@ -343,8 +383,8 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
                   <ReceiptLine label="Arc provider" value={preflight ? `${preflight.providers.arc.configured ? "CONFIGURED" : "UNCONFIGURED"}${preflight.providers.arc.reason ? ` · ${preflight.providers.arc.reason}` : ""}` : "checking..."} />
                   <ReceiptLine label="Circle provider" value={preflight ? `${preflight.providers.circle.configured ? "CONFIGURED" : "UNCONFIGURED"}${preflight.providers.circle.reason ? ` · ${preflight.providers.circle.reason}` : ""}` : "checking..."} />
                   <ReceiptLine label="Trace hash" value={selectedCardSettlement?.traceReceipt.traceHash ?? selectedCard.trace.traceHash} />
-                  <ReceiptLine label="Arc tx" value={selectedCardSettlement?.traceReceipt.txHash ?? selectedCard.trace.arcTxHash} />
-                  <ReceiptLine label="Arc network" value={selectedCardSettlement?.traceReceipt.network ?? (selectedCard.trace.arcTxHash ? "sample-proof" : undefined)} />
+                  <ReceiptLine label="Arc tx" value={arcTxHash} href={arcExplorerUrl} />
+                  <ReceiptLine label="Arc network" value={selectedCardSettlement?.traceReceipt.network ?? selectedCard.trace.arcNetwork} />
                   <ReceiptLine
                     label="Reward tx"
                     value={selectedCardSettlement?.rewardReceipts[0]?.txHash ?? selectedCard.validations.find((validation) => validation.rewardTxHash)?.rewardTxHash}
@@ -393,11 +433,17 @@ function Metric({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-function ReceiptLine({ label, value }: { label: string; value?: string }) {
+function ReceiptLine({ label, value, href }: { label: string; value?: string; href?: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2">
       <p className="font-semibold text-slate-400">{label}</p>
-      <p className="mt-1 break-all font-mono text-[11px] text-cyan-100">{value ?? "pending"}</p>
+      {href && value ? (
+        <a className="mt-1 block break-all font-mono text-[11px] text-cyan-100 underline decoration-cyan-300/40 underline-offset-4 hover:text-cyan-50" href={href} target="_blank" rel="noreferrer">
+          {value}
+        </a>
+      ) : (
+        <p className="mt-1 break-all font-mono text-[11px] text-cyan-100">{value ?? "pending"}</p>
+      )}
     </div>
   );
 }

@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 
 import { createAgentRunForCard, listAgentRuns } from "../../../lib/agent-run-store";
 import { type GenerateCardInput } from "../../../lib/market-pipeline";
-import { listGeneratedCards, upsertGeneratedCard } from "../../../lib/market-store";
+import { listGeneratedCardsPersisted, upsertGeneratedCardPersisted } from "../../../lib/market-store";
 import { generateMarketCard } from "../../../lib/provider-integrations";
 
 export async function GET() {
-  return NextResponse.json({ generatedCards: listGeneratedCards(), agentRuns: await listAgentRuns() });
+  return NextResponse.json({ generatedCards: await listGeneratedCardsPersisted(), agentRuns: await listAgentRuns() });
 }
 
 export async function POST(request: Request) {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to generate card" }, { status: 502 });
   }
 
-  const generatedCards = upsertGeneratedCard(card);
+  const generatedCards = await upsertGeneratedCardPersisted(card);
   const agentRun = await createAgentRunForCard({
     input: {
       sourceText: payload.sourceText,

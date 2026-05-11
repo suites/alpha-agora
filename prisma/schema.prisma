@@ -60,3 +60,15 @@ model AgentStep {
   @@index([nodeName])
   @@map("agent_steps")
 }
+
+model PersistedMarketCard {
+  id        String   @id
+  kind      String   @default("generated")
+  cardJson  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind])
+  @@index([updatedAt])
+  @@map("market_cards")
+}
