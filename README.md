@@ -151,18 +151,30 @@ Returns the updated card, reasoning trace JSON, Arc trace receipt, and USDC rewa
 
 ## Environment variables
 
-No credentials are required for the current demo.
+No credentials are required for the current demo; missing provider credentials fall back to deterministic/mock adapters.
 
-Future real integrations can use:
+Real integrations can use:
 
 ```bash
-ARC_RPC_URL=
-ARC_TRACE_REGISTRY_ADDRESS=
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=
+
+ARC_RPC_URL=https://rpc.testnet.arc.network
+ARC_CHAIN_ID=5042002
+ARC_USDC_ADDRESS=0x3600000000000000000000000000000000000000
+ARC_COMMITTER_PRIVATE_KEY=
+REWARD_RECIPIENT_ADDRESS=
+
+CIRCLE_ENV=sandbox
 CIRCLE_API_KEY=
-USDC_REWARD_WALLET=
+CIRCLE_ENTITY_SECRET=
+CIRCLE_BLOCKCHAIN=ARC-TESTNET
+CIRCLE_WALLET_ADDRESS=
+CIRCLE_TOKEN_ADDRESS=0x3600000000000000000000000000000000000000
+CIRCLE_RECIPIENT_ADDRESS=
 ```
 
-Do not commit real secrets.
+Circle Developer-Controlled Wallet transfers follow the official Arc Testnet guide shape: `walletAddress` + `blockchain` + `tokenAddress`. Do not commit real secrets.
 
 ## Project docs
 

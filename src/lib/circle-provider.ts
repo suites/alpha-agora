@@ -8,8 +8,9 @@ interface CircleWalletsModule {
     entitySecret: string;
   }) => {
     createTransaction: (input: {
-      walletId: string;
-      tokenId: string;
+      blockchain: string;
+      walletAddress: string;
+      tokenAddress: string;
       destinationAddress: string;
       amount: string[];
       fee: { type: "level"; config: { feeLevel: "LOW" | "MEDIUM" | "HIGH" } };
@@ -23,7 +24,7 @@ export async function settleCircleRewards(
   env: ProviderEnv = getProviderEnv(),
 ): Promise<RewardReceipt[] | undefined> {
   if (!shouldUseCircle(env)) return undefined;
-  if (!env.circleApiKey || !env.circleEntitySecret || !env.circleWalletId || !env.circleUsdcTokenId) {
+  if (!env.circleApiKey || !env.circleEntitySecret || !env.circleWalletAddress || !env.circleTokenAddress) {
     return undefined;
   }
 
@@ -42,8 +43,9 @@ export async function settleCircleRewards(
     assertRewardIsAllowed(validation.rewardUsdc, env);
 
     const response = await client.createTransaction({
-      walletId: env.circleWalletId,
-      tokenId: env.circleUsdcTokenId,
+      blockchain: env.circleBlockchain,
+      walletAddress: env.circleWalletAddress,
+      tokenAddress: env.circleTokenAddress,
       destinationAddress,
       amount: [validation.rewardUsdc.toFixed(2)],
       fee: { type: "level", config: { feeLevel: "MEDIUM" } },

@@ -26,8 +26,9 @@ describe("provider env", () => {
       REWARD_RECIPIENT_ADDRESS: `0x${"3".repeat(40)}`,
       CIRCLE_API_KEY: "circle-key",
       CIRCLE_ENTITY_SECRET: "entity-secret",
-      CIRCLE_WALLET_ID: "wallet-id",
-      CIRCLE_USDC_TOKEN_ID: "token-id",
+      CIRCLE_BLOCKCHAIN: "ARC-TESTNET",
+      CIRCLE_WALLET_ADDRESS: `0x${"4".repeat(40)}`,
+      CIRCLE_TOKEN_ADDRESS: `0x${"5".repeat(40)}`,
       CIRCLE_RECIPIENT_ADDRESS: `0x${"4".repeat(40)}`,
     });
 

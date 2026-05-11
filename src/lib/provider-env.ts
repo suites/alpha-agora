@@ -1,5 +1,7 @@
 export type RuntimeMode = "demo" | "production";
 
+const ARC_TESTNET_USDC_ADDRESS = "0x3600000000000000000000000000000000000000" as const;
+
 export interface ProviderEnv {
   mode: RuntimeMode;
   llmProvider: string;
@@ -14,9 +16,10 @@ export interface ProviderEnv {
   circleEnv: "sandbox" | "production";
   circleApiKey?: string;
   circleEntitySecret?: string;
-  circleWalletId?: string;
-  circleUsdcTokenId?: string;
-  circleRecipientAddress?: string;
+  circleBlockchain: string;
+  circleWalletAddress?: `0x${string}`;
+  circleTokenAddress?: `0x${string}`;
+  circleRecipientAddress?: `0x${string}`;
   allowMainnetTransfers: boolean;
   maxRewardUsdc: number;
 }
@@ -36,9 +39,10 @@ export function getProviderEnv(env: NodeJS.ProcessEnv = process.env): ProviderEn
     circleEnv: env.CIRCLE_ENV === "production" ? "production" : "sandbox",
     circleApiKey: optional(env.CIRCLE_API_KEY),
     circleEntitySecret: optional(env.CIRCLE_ENTITY_SECRET),
-    circleWalletId: optional(env.CIRCLE_WALLET_ID),
-    circleUsdcTokenId: optional(env.CIRCLE_USDC_TOKEN_ID),
-    circleRecipientAddress: optional(env.CIRCLE_RECIPIENT_ADDRESS),
+    circleBlockchain: optional(env.CIRCLE_BLOCKCHAIN) ?? "ARC-TESTNET",
+    circleWalletAddress: addressFromEnv(env.CIRCLE_WALLET_ADDRESS),
+    circleTokenAddress: addressFromEnv(env.CIRCLE_TOKEN_ADDRESS) ?? addressFromEnv(env.ARC_USDC_ADDRESS) ?? ARC_TESTNET_USDC_ADDRESS,
+    circleRecipientAddress: addressFromEnv(env.CIRCLE_RECIPIENT_ADDRESS),
     allowMainnetTransfers: env.ALLOW_MAINNET_TRANSFERS === "true",
     maxRewardUsdc: numberFromEnv(env.MAX_REWARD_USDC, 1),
   };
@@ -56,8 +60,8 @@ export function shouldUseCircle(env = getProviderEnv()): boolean {
   return Boolean(
     env.circleApiKey &&
       env.circleEntitySecret &&
-      env.circleWalletId &&
-      env.circleUsdcTokenId &&
+      env.circleWalletAddress &&
+      env.circleTokenAddress &&
       (env.circleRecipientAddress || env.rewardRecipientAddress),
   );
 }
