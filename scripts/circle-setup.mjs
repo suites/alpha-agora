@@ -12,6 +12,7 @@ const envPath = path.join(root, ".env.local");
 const recoveryDir = path.join(root, ".circle");
 const blockchain = "ARC-TESTNET";
 const arcUsdcTokenAddress = "0x3600000000000000000000000000000000000000";
+const defaultCircleBaseUrl = "https://api.circle.com";
 
 function parseEnvFile(filePath) {
   const lines = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8").split(/\r?\n/) : [];
@@ -63,10 +64,14 @@ function pickWallet(wallets) {
   return wallets.find((wallet) => wallet?.blockchain === blockchain && wallet?.address) ?? wallets.find((wallet) => wallet?.address);
 }
 
+function hasRecoveryFiles() {
+  return fs.existsSync(recoveryDir) && fs.readdirSync(recoveryDir).some((name) => name.startsWith("recovery_file_"));
+}
+
 async function main() {
   const { values } = parseEnvFile(envPath);
   const circleEnv = values.CIRCLE_ENV || "sandbox";
-  const baseUrl = values.CIRCLE_BASE_URL || (circleEnv === "production" ? "https://api.circle.com" : "https://api-sandbox.circle.com");
+  const baseUrl = values.CIRCLE_BASE_URL || defaultCircleBaseUrl;
   const apiKey = values.CIRCLE_API_KEY;
 
   if (!apiKey) {
@@ -81,6 +86,11 @@ async function main() {
   let entitySecret = values.CIRCLE_ENTITY_SECRET;
   let registeredEntitySecret = false;
   if (!entitySecret) {
+    if (hasRecoveryFiles()) {
+      throw new Error(
+        "CIRCLE_ENTITY_SECRET is missing, but a Circle recovery file already exists. Reset/rotate the entity secret in Circle Console with the recovery file, then put the new CIRCLE_ENTITY_SECRET in .env.local.",
+      );
+    }
     entitySecret = crypto.randomBytes(32).toString("hex");
     await registerEntitySecretCiphertext({
       apiKey,
@@ -89,12 +99,16 @@ async function main() {
       recoveryFileDownloadPath: recoveryDir,
     });
     registeredEntitySecret = true;
+    upsertEnv(envPath, {
+      CIRCLE_ENV: circleEnv,
+      CIRCLE_BASE_URL: baseUrl,
+      CIRCLE_ENTITY_SECRET: entitySecret,
+    });
   }
 
   const client = initiateDeveloperControlledWalletsClient({ apiKey, entitySecret, baseUrl });
 
   let walletAddress = values.CIRCLE_WALLET_ADDRESS;
-  let walletId = values.CIRCLE_WALLET_ID;
   let createdWallet = false;
 
   if (!walletAddress) {
@@ -103,11 +117,9 @@ async function main() {
 
     if (existingWallet?.address) {
       walletAddress = existingWallet.address;
-      walletId = existingWallet.id ?? walletId;
     } else {
       const walletSetResponse = await client.createWalletSet({
         name: "alpha-agora",
-        idempotencyKey: "alpha-agora-wallet-set",
       });
       const walletSetId = walletSetResponse.data?.walletSet?.id;
       if (!walletSetId) throw new Error("Circle wallet set creation returned no id");
@@ -116,12 +128,10 @@ async function main() {
         blockchains: [blockchain],
         count: 1,
         walletSetId,
-        idempotencyKey: "alpha-agora-arc-testnet-wallet",
       });
       const wallet = pickWallet(walletResponse.data?.wallets ?? []);
       if (!wallet?.address) throw new Error("Circle wallet creation returned no address");
       walletAddress = wallet.address;
-      walletId = wallet.id ?? walletId;
       createdWallet = true;
     }
   }
@@ -136,7 +146,6 @@ async function main() {
     CIRCLE_WALLET_ADDRESS: walletAddress,
     CIRCLE_TOKEN_ADDRESS: values.CIRCLE_TOKEN_ADDRESS || values.ARC_USDC_ADDRESS || arcUsdcTokenAddress,
     CIRCLE_RECIPIENT_ADDRESS: recipientAddress,
-    ...(walletId ? { CIRCLE_WALLET_ID: walletId } : {}),
   });
 
   console.log(JSON.stringify({
@@ -151,7 +160,6 @@ async function main() {
       CIRCLE_RECIPIENT_ADDRESS: "set",
       CIRCLE_BLOCKCHAIN: "set",
       CIRCLE_TOKEN_ADDRESS: "set",
-      CIRCLE_WALLET_ID: walletId ? "set" : "not-set",
     },
   }, null, 2));
 }

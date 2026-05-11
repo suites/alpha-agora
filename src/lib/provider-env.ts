@@ -40,7 +40,7 @@ export function getProviderEnv(env: NodeJS.ProcessEnv = process.env): ProviderEn
     circleEnv: env.CIRCLE_ENV === "production" ? "production" : "sandbox",
     circleApiKey: optional(env.CIRCLE_API_KEY),
     circleEntitySecret: optional(env.CIRCLE_ENTITY_SECRET),
-    circleBaseUrl: optional(env.CIRCLE_BASE_URL) ?? circleBaseUrlForEnv(env.CIRCLE_ENV),
+    circleBaseUrl: optional(env.CIRCLE_BASE_URL) ?? circleBaseUrlForEnv(),
     circleBlockchain: optional(env.CIRCLE_BLOCKCHAIN) ?? "ARC-TESTNET",
     circleWalletAddress: addressFromEnv(env.CIRCLE_WALLET_ADDRESS),
     circleTokenAddress: addressFromEnv(env.CIRCLE_TOKEN_ADDRESS) ?? addressFromEnv(env.ARC_USDC_ADDRESS) ?? ARC_TESTNET_USDC_ADDRESS,
@@ -92,6 +92,9 @@ function privateKeyFromEnv(value: string | undefined): `0x${string}` | undefined
   return trimmed && /^0x[a-fA-F0-9]{64}$/.test(trimmed) ? (trimmed as `0x${string}`) : undefined;
 }
 
-function circleBaseUrlForEnv(value: string | undefined): string {
-  return value === "production" ? "https://api.circle.com" : "https://api-sandbox.circle.com";
+function circleBaseUrlForEnv(): string {
+  // Circle Developer-Controlled Wallets TEST_API_KEY credentials authenticate
+  // against the Wallets API host. Keep this overrideable through
+  // CIRCLE_BASE_URL, but default to the SDK/API host for both test and live keys.
+  return "https://api.circle.com";
 }
