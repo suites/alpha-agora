@@ -1,7 +1,9 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
+import { generateMarketCardWithGemini } from "./gemini-provider";
 import type { AgentDecision, MarketCard } from "./market-card";
 import { generateMarketCardFromSource, type GenerateCardInput } from "./market-pipeline";
+import { getProviderEnv } from "./provider-env";
 
 export interface MarketCreationGraphResult {
   card: MarketCard;
@@ -93,12 +95,16 @@ function sourceReaderAgent(state: typeof MarketCreationState.State) {
   };
 }
 
-function marketDraftAgent(state: typeof MarketCreationState.State) {
+async function marketDraftAgent(state: typeof MarketCreationState.State) {
+  const graphInput = {
+    ...state.input,
+    sourceText: state.normalizedSource || state.input.sourceText,
+  };
+  const env = getProviderEnv();
+  const geminiCard = await generateMarketCardWithGemini(graphInput, env);
+
   return {
-    card: generateMarketCardFromSource({
-      ...state.input,
-      sourceText: state.normalizedSource || state.input.sourceText,
-    }),
+    card: geminiCard ?? generateMarketCardFromSource(graphInput),
     nodeNames: ["MarketDraftAgent"],
   };
 }
