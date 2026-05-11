@@ -99,10 +99,10 @@ Rationale: end-to-end skeleton in first 1–2 work blocks is more important than
 
 ### Milestone 2 — Agent pipeline API
 
-- Build `/api/generate-card` route that accepts URL/text and returns a Market Card.
-- Implement deterministic/local pipeline first.
-- Add LLM provider adapter using structured JSON if API keys are available.
-- Store generated cards.
+- Build `/api/generate-card` route that accepts URL/text and returns a Market Card. ✅
+- Implement deterministic/local pipeline first. ✅
+- Add LLM provider adapter using structured JSON if API keys are available. ✅ Adapter boundary added; live provider remains optional.
+- Store generated cards. ✅ In-memory demo persistence for generated draft cards.
 
 ### Milestone 3 — Validator workflow
 

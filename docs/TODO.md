@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Milestone 1 — Market Card domain model + seed demo
+Milestone 3 — Validator workflow
 
 ## Status legend
 
@@ -39,13 +39,13 @@ Milestone 1 — Market Card domain model + seed demo
 
 ## Milestone 2 — Agent pipeline API
 
-- [ ] Define pipeline interfaces and structured output schemas
-- [ ] Implement deterministic local pipeline for demo reliability
-- [ ] Add `/api/generate-card` route
-- [ ] Add LLM adapter boundary
-- [ ] Wire input form to generation API
-- [ ] Persist generated cards
-- [ ] Commit Milestone 2
+- [x] Define pipeline interfaces and structured output schemas
+- [x] Implement deterministic local pipeline for demo reliability
+- [x] Add `/api/generate-card` route
+- [x] Add LLM adapter boundary
+- [x] Wire input form to generation API
+- [x] Persist generated cards
+- [x] Commit Milestone 2
 
 ## Milestone 3 — Validator workflow
 

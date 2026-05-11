@@ -1,3 +1,4 @@
+import { GeneratedCardWorkbench } from "@/components/generated-card-workbench";
 import {
   getDashboardMetrics,
   getFeaturedMarketCard,
@@ -130,6 +131,8 @@ export default function Home() {
             <p className="mt-1 text-xs text-emerald-200">testnet USDC rewards</p>
           </div>
         </section>
+
+        <GeneratedCardWorkbench />
 
         <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-black/30">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
