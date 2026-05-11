@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { createAgentRunForCard, listAgentRuns } from "../../../lib/agent-run-store";
 import { type GenerateCardInput } from "../../../lib/market-pipeline";
 import { listGeneratedCards, upsertGeneratedCard } from "../../../lib/market-store";
 import { generateMarketCard } from "../../../lib/provider-integrations";
 
 export async function GET() {
-  return NextResponse.json({ generatedCards: listGeneratedCards() });
+  return NextResponse.json({ generatedCards: listGeneratedCards(), agentRuns: listAgentRuns() });
 }
 
 export async function POST(request: Request) {
@@ -34,6 +35,15 @@ export async function POST(request: Request) {
   }
 
   const generatedCards = upsertGeneratedCard(card);
+  const agentRun = createAgentRunForCard({
+    input: {
+      sourceText: payload.sourceText,
+      sourceUrl: payload.sourceUrl,
+      categoryHint: payload.categoryHint,
+    },
+    card,
+    provider: card.agentDecisions[0]?.agent ?? "unknown",
+  });
 
-  return NextResponse.json({ card, generatedCards }, { status: 201 });
+  return NextResponse.json({ card, generatedCards, agentRun }, { status: 201 });
 }

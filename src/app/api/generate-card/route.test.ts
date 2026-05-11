@@ -32,9 +32,15 @@ describe("/api/generate-card", () => {
     expect(body.card.status).toBe("DRAFT");
     expect(body.card.source.region).toBe("CN");
     expect(body.card.category).toBe("Gaming / Internet");
+    expect(body.agentRun).toMatchObject({
+      cardId: body.card.id,
+      status: "SUCCESS",
+    });
+    expect(body.agentRun.steps.map((step: { nodeName: string }) => step.nodeName)).toContain("CriticAgent");
 
     const listResponse = await GET();
     const listBody = await listResponse.json();
     expect(listBody.generatedCards).toEqual(expect.arrayContaining([body.card]));
+    expect(listBody.agentRuns[0].id).toBe(body.agentRun.id);
   });
 });
