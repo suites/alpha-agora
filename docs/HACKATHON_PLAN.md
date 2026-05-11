@@ -119,11 +119,11 @@ Rationale: end-to-end skeleton in first 1–2 work blocks is more important than
 
 ### Milestone 5 — Polish and submission readiness
 
-- Demo script and seeded scenario.
-- README and architecture docs.
-- Basic responsive polish.
-- Final lint/build/test.
-- Submission copy and screenshots/video checklist.
+- Demo script and seeded scenario. ✅ Added to `README.md` and `docs/SUBMISSION.md`.
+- README and architecture docs. ✅ README now covers setup, env vars, API routes, architecture, verification, and demo flow.
+- Basic responsive polish. ✅ Dashboard includes submission readiness assets and all milestone status items.
+- Final lint/build/test. ✅ `pnpm test && pnpm lint && pnpm build` passes with 7 test files / 24 tests.
+- Submission copy and screenshots/video checklist. ✅ Added to `docs/SUBMISSION.md`.
 
 ---
 

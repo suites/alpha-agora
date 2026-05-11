@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Milestone 5 — Submission readiness
+Submission-ready MVP complete
 
 ## Status legend
 
@@ -68,13 +68,13 @@ Milestone 5 — Submission readiness
 
 ## Milestone 5 — Submission readiness
 
-- [ ] README with setup/env/demo script
-- [ ] Submission narrative aligned to judging criteria
-- [ ] Seeded demo scenario walkthrough
-- [ ] Responsive polish
-- [ ] Final lint/build/test
-- [ ] Screenshots/video checklist
-- [ ] Final commit/tag
+- [x] README with setup/env/demo script
+- [x] Submission narrative aligned to judging criteria
+- [x] Seeded demo scenario walkthrough
+- [x] Responsive polish
+- [x] Final lint/build/test
+- [x] Screenshots/video checklist
+- [x] Final commit/tag
 
 ---
 

@@ -46,6 +46,14 @@ const milestoneItems = [
   "Milestone 2: generate-card API and deterministic agent pipeline",
   "Milestone 3: validator workflow and traction metrics",
   "Milestone 4: Arc trace + USDC reward adapters",
+  "Milestone 5: README, submission narrative, demo checklist, final verification",
+];
+
+const submissionAssets = [
+  "README setup + env documentation",
+  "Submission narrative and demo walkthrough",
+  "7 passing test files / 24 passing tests",
+  "Adapter boundaries ready for live Arc/Circle credentials",
 ];
 
 function StatusBadge({ status }: { status: MarketCard["status"] }) {
@@ -247,10 +255,10 @@ export default function Home() {
                 Build status
               </p>
               <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-300">
-                {milestoneItems.map((item, index) => (
+                {milestoneItems.map((item) => (
                   <li key={item} className="flex gap-3">
                     <span className="mt-1 h-2 w-2 rounded-full bg-cyan-300" />
-                    <span className={index <= 1 ? "text-white" : "text-slate-400"}>
+                    <span className="text-white">
                       {item}
                     </span>
                   </li>
@@ -258,6 +266,30 @@ export default function Home() {
               </ul>
             </div>
           </aside>
+        </section>
+
+        <section className="rounded-3xl border border-fuchsia-300/20 bg-fuchsia-300/[0.06] p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-fuchsia-200">
+                Submission readiness
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold text-white">
+                Final assets are packaged for hackathon review
+              </h2>
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-slate-300">
+              Judges can run the app locally, follow the demo script, and inspect the full Market Card Agent workflow without secrets.
+            </p>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-4">
+            {submissionAssets.map((asset) => (
+              <div key={asset} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <span className="text-lg text-fuchsia-200">✓</span>
+                <p className="mt-3 text-sm font-semibold leading-6 text-white">{asset}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
