@@ -1,3 +1,10 @@
+import {
+  getDashboardMetrics,
+  getFeaturedMarketCard,
+  marketCards,
+  type MarketCard,
+} from "@/lib/market-card";
+
 const judgingMetrics = [
   {
     label: "Agentic Sophistication",
@@ -7,7 +14,7 @@ const judgingMetrics = [
   {
     label: "Traction",
     weight: "30%",
-    proof: "20+ seeded cards, validator actions, reward/trace counts",
+    proof: "seed cards, validator actions, reward/trace counts",
   },
   {
     label: "Circle / Arc Usage",
@@ -31,13 +38,6 @@ const pipelineSteps = [
   "Arc trace",
 ];
 
-const scores = [
-  ["Market worthiness", 86],
-  ["Resolution clarity", 91],
-  ["Information asymmetry", 77],
-  ["Ambiguity risk", 21],
-];
-
 const milestoneItems = [
   "Milestone 0: scaffold, plan, orchestration log, dashboard skeleton",
   "Milestone 1: domain model, 20 KR/JP/CN seed cards, scoring tests",
@@ -46,7 +46,35 @@ const milestoneItems = [
   "Milestone 4: Arc trace + USDC reward adapters",
 ];
 
+function StatusBadge({ status }: { status: MarketCard["status"] }) {
+  const styles: Record<MarketCard["status"], string> = {
+    APPROVED: "bg-emerald-400/15 text-emerald-200",
+    VALIDATING: "bg-cyan-400/15 text-cyan-200",
+    DRAFT: "bg-slate-400/15 text-slate-200",
+    REJECTED: "bg-rose-400/15 text-rose-200",
+  };
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}>
+      {status}
+    </span>
+  );
+}
+
+function ScorePill({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-white/10 p-4">
+      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="mt-1 text-xs text-slate-400">{label}</p>
+    </div>
+  );
+}
+
 export default function Home() {
+  const metrics = getDashboardMetrics(marketCards);
+  const featured = getFeaturedMarketCard(marketCards);
+  const visibleCards = marketCards.slice(0, 9);
+
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 text-slate-100">
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-16 px-6 py-10 sm:px-8 lg:px-10">
@@ -92,6 +120,17 @@ export default function Home() {
           ))}
         </section>
 
+        <section className="grid gap-4 md:grid-cols-5">
+          <ScorePill label="Generated cards" value={metrics.generated} />
+          <ScorePill label="Validated" value={metrics.validated} />
+          <ScorePill label="Arc traces" value={metrics.arcTracesCommitted} />
+          <ScorePill label="Avg final score" value={metrics.averageFinalScore} />
+          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+            <p className="text-2xl font-bold text-white">{metrics.rewardsPaidUsdc.toFixed(2)}</p>
+            <p className="mt-1 text-xs text-emerald-200">testnet USDC rewards</p>
+          </div>
+        </section>
+
         <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-black/30">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -126,44 +165,47 @@ export default function Home() {
           <article className="rounded-3xl border border-white/10 bg-white/[0.055] p-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-rose-400/15 px-3 py-1 text-sm font-semibold text-rose-200">
-                KR Policy
+                {featured.source.region} · {featured.category}
               </span>
               <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-semibold text-emerald-200">
-                Marketable: High
+                Final score {featured.scores.final}
               </span>
-              <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-sm font-semibold text-cyan-200">
-                Trace ready
-              </span>
+              <StatusBadge status={featured.status} />
             </div>
-            <h2 className="mt-5 text-3xl font-semibold text-white">
-              Will South Korea officially delay crypto taxation before Dec 31,
-              2026?
-            </h2>
+            <h2 className="mt-5 text-3xl font-semibold text-white">{featured.question}</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              Source: {featured.source.sourceName} · {featured.source.summaryEn}
+            </p>
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               <div className="rounded-2xl bg-slate-950/70 p-5">
                 <p className="text-sm font-semibold text-slate-300">Resolution</p>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
-                  <li>• Source: Ministry of Economy and Finance</li>
-                  <li>• Backup: National Assembly bill status</li>
-                  <li>• End date: 2026-12-31 23:59 KST</li>
-                  <li>• Media reports alone do not count</li>
+                  {featured.resolution.sources.slice(0, 2).map((source) => (
+                    <li key={source}>• Source: {source}</li>
+                  ))}
+                  <li>
+                    • End date: {featured.resolution.endDate} ({featured.resolution.timezone})
+                  </li>
+                  {featured.resolution.edgeCases.slice(0, 2).map((edgeCase) => (
+                    <li key={edgeCase}>• {edgeCase}</li>
+                  ))}
                 </ul>
               </div>
               <div className="rounded-2xl bg-slate-950/70 p-5">
                 <p className="text-sm font-semibold text-slate-300">Agent critic</p>
                 <p className="mt-3 text-sm leading-6 text-slate-400">
-                  The phrase “reviewing” is not enough. The market should
-                  resolve only on official enactment or announcement.
+                  {featured.criticNotes[0]}
+                </p>
+                <p className="mt-4 text-xs uppercase tracking-[0.18em] text-cyan-300">
+                  {featured.agentDecisions[0]?.agent}: {featured.agentDecisions[0]?.decision}
                 </p>
               </div>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-4">
-              {scores.map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-white/10 p-4">
-                  <p className="text-2xl font-bold text-white">{value}</p>
-                  <p className="mt-1 text-xs text-slate-400">{label}</p>
-                </div>
-              ))}
+              <ScorePill label="Resolution clarity" value={featured.scores.resolutionClarity} />
+              <ScorePill label="Trading interest" value={featured.scores.tradingInterest} />
+              <ScorePill label="Info asymmetry" value={featured.scores.informationAsymmetry} />
+              <ScorePill label="Ambiguity risk" value={featured.scores.ambiguityRisk} />
             </div>
           </article>
 
@@ -175,15 +217,21 @@ export default function Home() {
               <dl className="mt-5 space-y-4 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-300">Validator reward</dt>
-                  <dd className="font-semibold text-white">0.05 testnet USDC</dd>
+                  <dd className="font-semibold text-white">
+                    {featured.validations[0]?.rewardUsdc.toFixed(2) ?? "0.00"} testnet USDC
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-300">Reward status</dt>
-                  <dd className="font-semibold text-emerald-200">Ready adapter</dd>
+                  <dt className="text-slate-300">Reward tx</dt>
+                  <dd className="max-w-36 truncate font-semibold text-emerald-200">
+                    {featured.validations[0]?.rewardTxHash ?? "pending"}
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-300">Arc trace</dt>
-                  <dd className="font-semibold text-cyan-200">SHA-256 hash</dd>
+                  <dd className="max-w-36 truncate font-semibold text-cyan-200">
+                    {featured.trace.arcTxHash ?? featured.trace.traceHash}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -196,7 +244,7 @@ export default function Home() {
                 {milestoneItems.map((item, index) => (
                   <li key={item} className="flex gap-3">
                     <span className="mt-1 h-2 w-2 rounded-full bg-cyan-300" />
-                    <span className={index === 0 ? "text-white" : "text-slate-400"}>
+                    <span className={index <= 1 ? "text-white" : "text-slate-400"}>
                       {item}
                     </span>
                   </li>
@@ -204,6 +252,47 @@ export default function Home() {
               </ul>
             </div>
           </aside>
+        </section>
+
+        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">
+                Seed Market Cards
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold text-white">
+                KR/JP/CN local-alpha backlog ready for validator workflow
+              </h2>
+            </div>
+            <p className="text-sm text-slate-400">
+              Showing {visibleCards.length} of {marketCards.length} cards
+            </p>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {visibleCards.map((card) => (
+              <article
+                key={card.id}
+                className="rounded-2xl border border-white/10 bg-slate-950/50 p-5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-cyan-300">
+                    {card.source.region} · {card.category}
+                  </span>
+                  <StatusBadge status={card.status} />
+                </div>
+                <h3 className="mt-4 line-clamp-3 text-base font-semibold leading-6 text-white">
+                  {card.question}
+                </h3>
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">
+                  {card.source.summaryEn}
+                </p>
+                <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-sm">
+                  <span className="text-slate-400">Final score</span>
+                  <span className="font-bold text-white">{card.scores.final}</span>
+                </div>
+              </article>
+            ))}
+          </div>
         </section>
       </section>
     </main>

@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Milestone 0 — Kickoff scaffold
+Milestone 1 — Market Card domain model + seed demo
 
 ## Status legend
 
@@ -29,13 +29,13 @@ Milestone 0 — Kickoff scaffold
 
 ## Milestone 1 — Market Card domain model + seed demo
 
-- [ ] Define TypeScript domain types
-- [ ] Add scoring utility functions
-- [ ] Add 20 seed market cards across KR/JP/CN
-- [ ] Render Market Card list UI
-- [ ] Render Market Card detail UI
-- [ ] Add basic tests for scoring/model utilities
-- [ ] Commit Milestone 1
+- [x] Define TypeScript domain types
+- [x] Add scoring utility functions
+- [x] Add 20 seed market cards across KR/JP/CN
+- [x] Render Market Card list UI
+- [x] Render Market Card detail UI
+- [x] Add basic tests for scoring/model utilities
+- [x] Commit Milestone 1
 
 ## Milestone 2 — Agent pipeline API
 
