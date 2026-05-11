@@ -41,7 +41,11 @@ describe("/api/generate-card", () => {
       cardId: body.card.id,
       status: "SUCCESS",
     });
-    expect(body.agentRun.steps.map((step: { nodeName: string }) => step.nodeName)).toContain("CriticAgent");
+    expect(body.agentRun.steps.map((step: { nodeName: string }) => step.nodeName)).toEqual([
+      "SourceReaderAgent",
+      "MarketDraftAgent",
+      "CriticAgent",
+    ]);
 
     const listResponse = await GET();
     const listBody = await listResponse.json();
