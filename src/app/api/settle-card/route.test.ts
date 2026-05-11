@@ -17,7 +17,7 @@ describe("/api/settle-card", () => {
     await expect(response.json()).resolves.toMatchObject({ error: "card not found" });
   });
 
-  it("commits approved card trace and settles queued validator rewards", async () => {
+  it("returns UNCONFIGURED instead of fake settlement when live providers are missing", async () => {
     const generatedResponse = await generateCard(
       new Request("http://localhost/api/generate-card", {
         method: "POST",
@@ -49,11 +49,11 @@ describe("/api/settle-card", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(503);
     const body = await response.json();
-    expect(body.card.trace.arcTxHash).toMatch(/^0xarc/);
-    expect(body.traceReceipt.network).toBe("arc-testnet-mock");
-    expect(body.rewardReceipts).toHaveLength(1);
-    expect(body.card.validations.at(-1).rewardTxHash).toMatch(/^0xusdc/);
+    expect(body).toMatchObject({
+      error: "settlement provider unconfigured",
+      providerStatus: "UNCONFIGURED",
+    });
   });
 });

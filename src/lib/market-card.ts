@@ -99,8 +99,8 @@ function scores(input: ScoreInputs): MarketScores {
 
 function trace(id: string, committed = true): TraceCommit {
   return {
-    traceHash: `0xtrace${id.padStart(58, "0")}`,
-    arcTxHash: committed ? `0xarc${id.padStart(60, "0")}` : undefined,
+    traceHash: `sample-trace-${id}`,
+    arcTxHash: committed ? `sample-arc-proof-${id}` : undefined,
     committedAt: committed ? "2026-05-11T04:00:00.000Z" : undefined,
   };
 }
@@ -111,7 +111,7 @@ function approval(validator: string, rewardUsdc = 0.05): Validation {
     verdict: "APPROVE",
     comment: "Resolution source and edge cases are clear enough for a market proposal.",
     rewardUsdc,
-    rewardTxHash: `0xusdc${validator.toLowerCase().replace(/[^a-z0-9]/g, "").padEnd(58, "0")}`,
+    rewardTxHash: `sample-usdc-reward-${validator.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
   };
 }
 

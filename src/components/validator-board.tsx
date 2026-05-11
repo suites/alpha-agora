@@ -301,7 +301,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
                 <div className="mt-4 grid gap-3 text-xs md:grid-cols-2">
                   <ReceiptLine label="Trace hash" value={selectedCardSettlement?.traceReceipt.traceHash ?? selectedCard.trace.traceHash} />
                   <ReceiptLine label="Arc tx" value={selectedCardSettlement?.traceReceipt.txHash ?? selectedCard.trace.arcTxHash} />
-                  <ReceiptLine label="Arc network" value={selectedCardSettlement?.traceReceipt.network ?? (selectedCard.trace.arcTxHash ? "arc-testnet-mock" : undefined)} />
+                  <ReceiptLine label="Arc network" value={selectedCardSettlement?.traceReceipt.network ?? (selectedCard.trace.arcTxHash ? "sample-proof" : undefined)} />
                   <ReceiptLine
                     label="Reward tx"
                     value={selectedCardSettlement?.rewardReceipts[0]?.txHash ?? selectedCard.validations.find((validation) => validation.rewardTxHash)?.rewardTxHash}

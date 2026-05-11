@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GET, POST } from "./route";
 import { POST as generateCard } from "../generate-card/route";
-import { POST as settleCard } from "../settle-card/route";
+import { findCard, updateCard } from "../../../lib/market-store";
 
 describe("/api/validate-card", () => {
   it("returns 404 for an unknown card", async () => {
@@ -92,12 +92,16 @@ describe("/api/validate-card", () => {
         }),
       }),
     );
-    await settleCard(
-      new Request("http://localhost/api/settle-card", {
-        method: "POST",
-        body: JSON.stringify({ cardId: generatedBody.card.id }),
-      }),
-    );
+    const approvedCard = findCard(generatedBody.card.id);
+    if (!approvedCard) throw new Error("approved card missing");
+    updateCard({
+      ...approvedCard,
+      trace: {
+        traceHash: "sample-trace-lock-test",
+        arcTxHash: "sample-arc-proof-lock-test",
+        committedAt: "2026-05-11T04:00:00.000Z",
+      },
+    });
 
     const response = await POST(
       new Request("http://localhost/api/validate-card", {

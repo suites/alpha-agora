@@ -63,6 +63,7 @@ export async function settleCircleRewards(
 
     receipts.push({
       network: env.circleEnv === "production" ? "circle-wallets-production" : "circle-wallets-sandbox",
+      status: "SUCCESS",
       validator: validation.validator,
       amountUsdc: validation.rewardUsdc,
       txHash: providerId,

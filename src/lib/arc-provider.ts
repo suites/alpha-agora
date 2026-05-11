@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { canonicalJson } from "./canonical-json";
 import type { ArcTraceReceipt, ReasoningTrace, RewardReceipt } from "./settlement-adapters";
 import type { MarketCard } from "./market-card";
 import { getProviderEnv, shouldUseArc, type ProviderEnv } from "./provider-env";
@@ -70,6 +71,7 @@ export async function commitTraceToArcProvider(
 
   return {
     network: "arc-testnet",
+    status: "SUCCESS",
     traceHash,
     txHash,
     committedAt: new Date().toISOString(),
@@ -101,6 +103,7 @@ export async function settleArcUsdcRewards(
     await publicClient.waitForTransactionReceipt({ hash: txHash });
     receipts.push({
       network: "arc-usdc-testnet",
+      status: "SUCCESS",
       validator: validation.validator,
       amountUsdc: validation.rewardUsdc,
       txHash,
@@ -159,5 +162,5 @@ async function importAccounts(): Promise<AccountsModule> {
 }
 
 function hashReasoningTrace(trace: ReasoningTrace): string {
-  return `0x${createHash("sha256").update(JSON.stringify(trace)).digest("hex")}`;
+  return `0x${createHash("sha256").update(canonicalJson(trace)).digest("hex")}`;
 }

@@ -126,7 +126,7 @@ export function generateMarketCardFromStructuredOutput(
     agentDecisions: decisions,
     validations: [],
     trace: {
-      traceHash: `0xtrace${stableHash(JSON.stringify({ id, normalizedText, scores: structured.scores })).padEnd(58, "0").slice(0, 58)}`,
+      traceHash: `pending-trace-${stableHash(JSON.stringify({ id, normalizedText, scores: structured.scores })).slice(0, 16)}`,
     },
     status: "DRAFT",
     createdAt: DEFAULT_CREATED_AT,

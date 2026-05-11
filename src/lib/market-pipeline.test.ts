@@ -43,7 +43,7 @@ describe("market pipeline", () => {
       "ResolutionRulesAgent",
       "CriticAgent",
     ]);
-    expect(first.trace.traceHash).toMatch(/^0xtrace/);
+    expect(first.trace.traceHash).toMatch(/^pending-trace-/);
     expect(first.trace.arcTxHash).toBeUndefined();
   });
 
