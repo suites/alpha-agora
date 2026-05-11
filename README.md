@@ -76,10 +76,13 @@ The current Arc/Circle implementations are intentionally mock/testnet-compatible
 
 ```bash
 pnpm install
+cp .env.sample .env.local
 pnpm dev
 ```
 
 Open http://localhost:3000.
+
+Alpha Agora uses `.env.local` as the single local environment file for both the Next.js app and Prisma CLI config. Do not create a separate `.env`; production values should live in the deployment platform environment variable settings, not in committed files.
 
 ## Verification
 
@@ -151,7 +154,13 @@ Returns the updated card, reasoning trace JSON, Arc trace receipt, and USDC rewa
 
 ## Environment variables
 
-No credentials are required for the current demo; missing provider credentials fall back to deterministic/mock adapters.
+Local development uses `.env.local` only. Start from the committed template:
+
+```bash
+cp .env.sample .env.local
+```
+
+Vercel/production should use dashboard environment variables instead of checked-in env files. Missing provider credentials fall back to deterministic/mock adapters in demo mode.
 
 Real integrations can use:
 
