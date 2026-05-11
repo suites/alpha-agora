@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import type { MarketCard, ValidationVerdict } from "@/lib/market-card";
+import type { ArcTraceReceipt, RewardReceipt } from "@/lib/settlement-adapters";
 import type { ValidatorMetrics } from "@/lib/validation-workflow";
 
 const defaultMetrics: ValidatorMetrics = {
@@ -19,6 +20,12 @@ const verdictStyles: Record<ValidationVerdict, string> = {
   REJECT: "bg-rose-300 text-slate-950 hover:bg-rose-200",
 };
 
+interface SettlementResponse {
+  card: MarketCard;
+  traceReceipt: ArcTraceReceipt;
+  rewardReceipts: RewardReceipt[];
+}
+
 export function ValidatorBoard() {
   const [cards, setCards] = useState<MarketCard[]>([]);
   const [metrics, setMetrics] = useState<ValidatorMetrics>(defaultMetrics);
@@ -26,7 +33,9 @@ export function ValidatorBoard() {
   const [comment, setComment] = useState("Official source and deadline are clear enough for validator approval.");
   const [editedQuestion, setEditedQuestion] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [settlement, setSettlement] = useState<SettlementResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,11 +88,39 @@ export function ValidatorBoard() {
       setCards(body.cards ?? []);
       setMetrics(body.metrics ?? defaultMetrics);
       setSelectedCardId(body.card.id);
+      setSettlement(null);
       setEditedQuestion("");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown validation error");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function settleCard() {
+    if (!selectedCard) return;
+
+    setIsSettling(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/settle-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cardId: selectedCard.id }),
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body.error ?? "Settlement failed");
+      }
+
+      setSettlement(body as SettlementResponse);
+      setCards((currentCards) => currentCards.map((card) => (card.id === body.card.id ? body.card : card)));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown settlement error");
+    } finally {
+      setIsSettling(false);
     }
   }
 
@@ -187,6 +224,36 @@ export function ValidatorBoard() {
               </div>
               {error ? <p className="mt-3 text-sm text-rose-200">{error}</p> : null}
 
+              <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">
+                      Arc trace + USDC settlement
+                    </p>
+                    <p className="mt-2 text-sm text-slate-300">
+                      Commit reasoning trace to the Arc adapter and settle queued validator rewards.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSettling || selectedCard.status !== "APPROVED"}
+                    onClick={settleCard}
+                    className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
+                  >
+                    {isSettling ? "Settling..." : "Commit trace + pay rewards"}
+                  </button>
+                </div>
+                <div className="mt-4 grid gap-3 text-xs md:grid-cols-2">
+                  <ReceiptLine label="Trace hash" value={settlement?.traceReceipt.traceHash ?? selectedCard.trace.traceHash} />
+                  <ReceiptLine label="Arc tx" value={settlement?.traceReceipt.txHash ?? selectedCard.trace.arcTxHash} />
+                  <ReceiptLine label="Arc network" value={settlement?.traceReceipt.network} />
+                  <ReceiptLine
+                    label="Reward tx"
+                    value={settlement?.rewardReceipts[0]?.txHash ?? selectedCard.validations.find((validation) => validation.rewardTxHash)?.rewardTxHash}
+                  />
+                </div>
+              </div>
+
               <div className="mt-5 space-y-2">
                 {selectedCard.validations.slice(-3).map((validation, index) => (
                   <div key={`${validation.validator}-${index}`} className="rounded-xl bg-white/[0.035] px-4 py-3 text-sm">
@@ -212,6 +279,15 @@ function Metric({ label, value }: { label: string; value: number | string }) {
     <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
       <p className="font-bold text-white">{value}</p>
       <p className="mt-1 text-[11px] text-slate-400">{label}</p>
+    </div>
+  );
+}
+
+function ReceiptLine({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2">
+      <p className="font-semibold text-slate-400">{label}</p>
+      <p className="mt-1 break-all font-mono text-[11px] text-cyan-100">{value ?? "pending"}</p>
     </div>
   );
 }

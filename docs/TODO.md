@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Milestone 4 — Trace and reward adapters
+Milestone 5 — Submission readiness
 
 ## Status legend
 
@@ -57,14 +57,14 @@ Milestone 4 — Trace and reward adapters
 
 ## Milestone 4 — Trace and reward adapters
 
-- [ ] Add reasoning trace JSON builder
-- [ ] Add SHA-256 trace hashing
-- [ ] Add Arc TraceRegistry adapter boundary
-- [ ] Add mock/testnet trace commit receipt
-- [ ] Add USDC reward settlement adapter boundary
-- [ ] Add mock/testnet reward receipt
-- [ ] Display tx hashes/statuses in Market Card detail
-- [ ] Commit Milestone 4
+- [x] Add reasoning trace JSON builder
+- [x] Add SHA-256 trace hashing
+- [x] Add Arc TraceRegistry adapter boundary
+- [x] Add mock/testnet trace commit receipt
+- [x] Add USDC reward settlement adapter boundary
+- [x] Add mock/testnet reward receipt
+- [x] Display tx hashes/statuses in Market Card detail
+- [x] Commit Milestone 4
 
 ## Milestone 5 — Submission readiness
 

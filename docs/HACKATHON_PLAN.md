@@ -112,9 +112,9 @@ Rationale: end-to-end skeleton in first 1–2 work blocks is more important than
 
 ### Milestone 4 — Trace and reward adapters
 
-- Add `TraceRegistry` adapter: hash reasoning trace and return tx-like receipt.
-- Add `RewardSettlement` adapter: USDC reward/bounty receipt.
-- Wire UI to show tx hashes and statuses.
+- Add `TraceRegistry` adapter: hash reasoning trace and return tx-like receipt. ✅ Reasoning trace JSON + SHA-256 trace hash implemented with Arc mock receipt.
+- Add `RewardSettlement` adapter: USDC reward/bounty receipt. ✅ Mock Circle USDC settlement receipt attaches reward tx hashes to validations.
+- Wire UI to show tx hashes and statuses. ✅ Validator board can settle approved cards and display trace hash, Arc tx, Arc network, and reward tx.
 - Replace mock with real Arc/Circle integration when credentials/RPC are confirmed.
 
 ### Milestone 5 — Polish and submission readiness
