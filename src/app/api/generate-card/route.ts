@@ -6,7 +6,7 @@ import { listGeneratedCards, upsertGeneratedCard } from "../../../lib/market-sto
 import { generateMarketCard } from "../../../lib/provider-integrations";
 
 export async function GET() {
-  return NextResponse.json({ generatedCards: listGeneratedCards(), agentRuns: listAgentRuns() });
+  return NextResponse.json({ generatedCards: listGeneratedCards(), agentRuns: await listAgentRuns() });
 }
 
 export async function POST(request: Request) {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   const generatedCards = upsertGeneratedCard(card);
-  const agentRun = createAgentRunForCard({
+  const agentRun = await createAgentRunForCard({
     input: {
       sourceText: payload.sourceText,
       sourceUrl: payload.sourceUrl,

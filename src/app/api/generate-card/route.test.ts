@@ -1,8 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetAgentRunStoreForTests } from "../../../lib/agent-run-store";
 import { GET, POST } from "./route";
 
 describe("/api/generate-card", () => {
+  beforeEach(async () => {
+    await resetAgentRunStoreForTests();
+  });
+
   it("rejects requests without sourceText", async () => {
     const response = await POST(
       new Request("http://localhost/api/generate-card", {

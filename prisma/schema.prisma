@@ -1,0 +1,62 @@
+// Alpha Agora Prisma schema
+// PostgreSQL is the only production/local persistence target for runtime data.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AgentRunStatus {
+  SUCCESS
+  PENDING
+  FAILED
+}
+
+enum AgentStepStatus {
+  SUCCESS
+  PENDING
+  FAILED
+  UNCONFIGURED
+  RETRYABLE_FAILED
+}
+
+model AgentRun {
+  id          String         @id @default(uuid()) @db.Uuid
+  cardId      String
+  provider    String
+  status      AgentRunStatus @default(SUCCESS)
+  inputJson   Json
+  outputJson  Json
+  createdAt   DateTime       @default(now())
+  completedAt DateTime?
+  steps       AgentStep[]
+
+  @@index([cardId])
+  @@index([createdAt])
+  @@map("agent_runs")
+}
+
+model AgentStep {
+  id          String          @id @default(uuid()) @db.Uuid
+  runId       String          @db.Uuid
+  sequence    Int
+  nodeName    String
+  status      AgentStepStatus @default(SUCCESS)
+  inputJson   Json
+  outputJson  Json
+  confidence  Float
+  rationale   String
+  toolCalls   Json
+  startedAt   DateTime        @default(now())
+  completedAt DateTime?
+
+  run AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, sequence])
+  @@index([nodeName])
+  @@map("agent_steps")
+}

@@ -1,31 +1,14 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { generateMarketCardFromSource } from "./market-pipeline";
-import {
-  createAgentRunForCard,
-  listAgentRuns,
-  resetAgentRunStoreForTests,
-  setAgentRunDatabasePathForTests,
-} from "./agent-run-store";
+import { createAgentRunForCard, listAgentRuns, resetAgentRunStoreForTests } from "./agent-run-store";
 
-let tempDir: string;
-
-beforeEach(() => {
-  tempDir = mkdtempSync(join(tmpdir(), "alpha-agora-agent-runs-"));
-  setAgentRunDatabasePathForTests(join(tempDir, "agent-runs.sqlite"));
-  resetAgentRunStoreForTests();
-});
-
-afterEach(() => {
-  rmSync(tempDir, { recursive: true, force: true });
+beforeEach(async () => {
+  await resetAgentRunStoreForTests();
 });
 
 describe("agent run store", () => {
-  it("persists an AgentRun and ordered AgentSteps for generated market cards", () => {
+  it("persists an AgentRun and ordered AgentSteps for generated market cards", async () => {
     const input = {
       sourceText: "서울시가 2026년 7월까지 심야 자율주행 셔틀 확대 여부를 공식 위원회 안건으로 올릴 예정이다.",
       sourceUrl: "https://example.com/kr/agent-run-store",
@@ -33,7 +16,7 @@ describe("agent run store", () => {
     };
     const card = generateMarketCardFromSource(input);
 
-    const run = createAgentRunForCard({ input, card, provider: "deterministic" });
+    const run = await createAgentRunForCard({ input, card, provider: "deterministic" });
 
     expect(run.cardId).toBe(card.id);
     expect(run.status).toBe("SUCCESS");
@@ -48,7 +31,7 @@ describe("agent run store", () => {
     expect(run.steps[0].confidence).toBeGreaterThan(0);
     expect(run.steps[0].rationale).toContain("Detected");
 
-    const runs = listAgentRuns();
+    const runs = await listAgentRuns();
     expect(runs).toHaveLength(1);
     expect(runs[0]).toEqual(run);
   });

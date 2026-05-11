@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: alpha-agora-postgres
+    environment:
+      POSTGRES_USER: alpha_agora
+      POSTGRES_PASSWORD: alpha_agora
+      POSTGRES_DB: alpha_agora
+    ports:
+      - "54329:5432"
+    volumes:
+      - alpha-agora-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alpha_agora -d alpha_agora"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  alpha-agora-postgres:
