@@ -104,6 +104,7 @@ export async function settleValidatedCardWithProviders(card: MarketCard, env = g
       trace: {
         traceHash: traceReceipt.traceHash,
         arcTxHash: traceReceipt.txHash,
+        arcNetwork: traceReceipt.network,
         committedAt: traceReceipt.committedAt,
       },
     },

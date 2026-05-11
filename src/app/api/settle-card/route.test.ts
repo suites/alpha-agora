@@ -59,12 +59,20 @@ describe("/api/settle-card", () => {
       }),
     );
 
+    const originalArcRpcUrl = process.env.ARC_RPC_URL;
+    const originalArcCommitterPrivateKey = process.env.ARC_COMMITTER_PRIVATE_KEY;
+    delete process.env.ARC_RPC_URL;
+    delete process.env.ARC_COMMITTER_PRIVATE_KEY;
+
     const response = await settleCard(
       new Request("http://localhost/api/settle-card", {
         method: "POST",
         body: JSON.stringify({ cardId: generatedBody.card.id }),
       }),
     );
+
+    process.env.ARC_RPC_URL = originalArcRpcUrl;
+    process.env.ARC_COMMITTER_PRIVATE_KEY = originalArcCommitterPrivateKey;
 
     expect(response.status).toBe(503);
     const body = await response.json();

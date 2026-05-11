@@ -53,6 +53,7 @@ export interface Validation {
 export interface TraceCommit {
   traceHash: string;
   arcTxHash?: string;
+  arcNetwork?: string;
   committedAt?: string;
 }
 
