@@ -10,9 +10,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.71",
+    "@circle-fin/developer-controlled-wallets": "^10.3.1",
+    "ai": "^6.0.177",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "viem": "^2.48.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { findCard, updateCard } from "../../../lib/market-store";
-import { settleValidatedCard } from "../../../lib/settlement-adapters";
+import { settleValidatedCardWithProviders } from "../../../lib/settlement-adapters";
 
 interface SettleCardPayload {
   cardId?: string;
@@ -29,7 +29,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "card must be approved before settlement" }, { status: 409 });
   }
 
-  const result = settleValidatedCard(card);
+  let result;
+
+  try {
+    result = await settleValidatedCardWithProviders(card);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to settle card" }, { status: 502 });
+  }
+
   updateCard(result.card);
 
   return NextResponse.json(result);

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { generateMarketCardFromSource, type GenerateCardInput } from "../../../lib/market-pipeline";
+import { type GenerateCardInput } from "../../../lib/market-pipeline";
 import { listGeneratedCards, upsertGeneratedCard } from "../../../lib/market-store";
+import { generateMarketCard } from "../../../lib/provider-integrations";
 
 export async function GET() {
   return NextResponse.json({ generatedCards: listGeneratedCards() });
@@ -20,11 +21,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "sourceText is required" }, { status: 400 });
   }
 
-  const card = generateMarketCardFromSource({
-    sourceText: payload.sourceText,
-    sourceUrl: payload.sourceUrl,
-    categoryHint: payload.categoryHint,
-  });
+  let card;
+
+  try {
+    card = await generateMarketCard({
+      sourceText: payload.sourceText,
+      sourceUrl: payload.sourceUrl,
+      categoryHint: payload.categoryHint,
+    });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to generate card" }, { status: 502 });
+  }
 
   const generatedCards = upsertGeneratedCard(card);
 

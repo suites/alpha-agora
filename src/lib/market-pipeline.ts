@@ -35,7 +35,7 @@ export interface PipelineStructuredOutput {
 }
 
 export interface MarketCardGeneratorAdapter {
-  generate(input: GenerateCardInput): MarketCard;
+  generate(input: GenerateCardInput): MarketCard | Promise<MarketCard>;
 }
 
 const DEFAULT_END_DATE = "2026-12-31";
@@ -63,48 +63,70 @@ export function generateMarketCardFromSource(input: GenerateCardInput): MarketCa
   const normalizedText = normalizeSourceText(input.sourceText);
   const inference = inferRegionAndLanguage(normalizedText);
   const category = input.categoryHint?.trim() || inferCategory(normalizedText);
-  const id = `generated-${stableHash(`${input.sourceUrl ?? "manual"}:${normalizedText}`).slice(0, 12)}`;
-  const sourceTitle = buildSourceTitle(normalizedText, inference.region);
-  const questionSubject = buildQuestionSubject(normalizedText, category, inference.region);
   const scores = scoreGeneratedCard(normalizedText, category);
-  const resolution: ResolutionRules = {
-    endDate: DEFAULT_END_DATE,
-    timezone: inference.timezone,
-    sources: officialSourcesByRegion[inference.region],
-    edgeCases: [
-      "Media reports, rumors, or unnamed-source leaks alone do not count",
-      "The outcome must be confirmed by an official source before the deadline",
-      "If the official source is published after the deadline, the market resolves No",
+  const structured: PipelineStructuredOutput = {
+    extractedEvent: {
+      title: buildSourceTitle(normalizedText, inference.region),
+      summaryEn: summarizeToEnglish(normalizedText, category, inference.region),
+      category,
+      region: inference.region,
+      language: inference.language,
+    },
+    marketQuestion: `Will ${buildQuestionSubject(normalizedText, category, inference.region)} before December 31, 2026?`,
+    resolution: {
+      endDate: DEFAULT_END_DATE,
+      timezone: inference.timezone,
+      sources: officialSourcesByRegion[inference.region],
+      edgeCases: [
+        "Media reports, rumors, or unnamed-source leaks alone do not count",
+        "The outcome must be confirmed by an official source before the deadline",
+        "If the official source is published after the deadline, the market resolves No",
+      ],
+    },
+    scores,
+    critique: [
+      "Generated draft requires human validator review before reward settlement.",
+      "Resolution wording intentionally depends on official sources, not press speculation.",
     ],
   };
-  const decisions = buildAgentDecisions(scores);
+
+  return generateMarketCardFromStructuredOutput(input, structured);
+}
+
+export function generateMarketCardFromStructuredOutput(
+  input: GenerateCardInput,
+  structured: PipelineStructuredOutput,
+  options: { generatorName?: string } = {},
+): MarketCard {
+  const normalizedText = normalizeSourceText(input.sourceText);
+  const category = structured.extractedEvent.category.trim() || input.categoryHint?.trim() || inferCategory(normalizedText);
+  const id = `generated-${stableHash(`${input.sourceUrl ?? "manual"}:${normalizedText}`).slice(0, 12)}`;
+  const resolution: ResolutionRules = structured.resolution;
+  const decisions = buildAgentDecisions(structured.scores, options.generatorName);
 
   return {
     id,
     source: {
       id: `src-${id}`,
-      title: sourceTitle,
+      title: structured.extractedEvent.title,
       url: input.sourceUrl?.trim() || "manual://operator-input",
-      language: inference.language,
-      region: inference.region,
+      language: structured.extractedEvent.language,
+      region: structured.extractedEvent.region,
       rawExcerpt: normalizedText,
-      summaryEn: summarizeToEnglish(normalizedText, category, inference.region),
+      summaryEn: structured.extractedEvent.summaryEn,
       publishedAt: DEFAULT_CREATED_AT.slice(0, 10),
       sourceName: input.sourceUrl ? hostnameFromUrl(input.sourceUrl) : "Operator submitted source",
     },
     category,
-    question: `Will ${questionSubject} before December 31, 2026?`,
+    question: structured.marketQuestion,
     outcomes: ["Yes", "No"],
     resolution,
-    scores,
-    criticNotes: [
-      "Generated draft requires human validator review before reward settlement.",
-      "Resolution wording intentionally depends on official sources, not press speculation.",
-    ],
+    scores: structured.scores,
+    criticNotes: structured.critique,
     agentDecisions: decisions,
     validations: [],
     trace: {
-      traceHash: `0xtrace${stableHash(JSON.stringify({ id, normalizedText, scores })).padEnd(58, "0").slice(0, 58)}`,
+      traceHash: `0xtrace${stableHash(JSON.stringify({ id, normalizedText, scores: structured.scores })).padEnd(58, "0").slice(0, 58)}`,
     },
     status: "DRAFT",
     createdAt: DEFAULT_CREATED_AT,
@@ -176,10 +198,10 @@ function scoreGeneratedCard(text: string, category: string): MarketScores {
   return { ...input, final: computeFinalScore(input) };
 }
 
-function buildAgentDecisions(scores: MarketScores): AgentDecision[] {
+function buildAgentDecisions(scores: MarketScores, extractorName = "EventExtractor"): AgentDecision[] {
   return [
     {
-      agent: "EventExtractor",
+      agent: extractorName,
       decision: "EXTRACTED",
       rationale: "Detected a local-language event with region, category, and official-resolution path.",
       confidence: 0.82,
