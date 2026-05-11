@@ -2,8 +2,10 @@
 
 import { useCallback, useState } from "react";
 
+import { AgentRunConsole } from "@/components/agent-run-console";
 import { GeneratedCardWorkbench } from "@/components/generated-card-workbench";
 import { ValidatorBoard } from "@/components/validator-board";
+import type { AgentRun } from "@/lib/agent-run-store";
 import type { DashboardMetrics, MarketCard } from "@/lib/market-card";
 
 interface MarketCardDemoProps {
@@ -14,12 +16,14 @@ export function MarketCardDemo({ initialMetrics }: MarketCardDemoProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const [metrics, setMetrics] = useState(initialMetrics);
+  const [latestAgentRun, setLatestAgentRun] = useState<AgentRun | null>(null);
 
-  const handleCardGenerated = useCallback((card: MarketCard) => {
+  const handleCardGenerated = useCallback((card: MarketCard, agentRun?: AgentRun) => {
     setSelectedCardId(card.id);
+    setLatestAgentRun(agentRun ?? null);
     setRefreshToken((token) => token + 1);
     window.setTimeout(() => {
-      document.getElementById("validator-workflow")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("agent-run-console")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 120);
   }, []);
 
@@ -41,6 +45,8 @@ export function MarketCardDemo({ initialMetrics }: MarketCardDemoProps) {
       </section>
 
       <GeneratedCardWorkbench onCardGenerated={handleCardGenerated} />
+
+      <AgentRunConsole run={latestAgentRun} />
 
       <div id="validator-workflow" className="scroll-mt-6">
         <ValidatorBoard

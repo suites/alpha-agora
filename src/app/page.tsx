@@ -120,6 +120,7 @@ export default function Home() {
               <a href="#live-metrics" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Live metrics</a>
               <a href="#live-pipeline" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Generate</a>
               <a href="#validator-workflow" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Validate</a>
+              <a href="#agent-run-console" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Run console</a>
               <a href="#agent-workflow" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Agent workflow</a>
               <a href="#seed-cards" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Seed cards</a>
             </nav>

@@ -2,13 +2,14 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import type { AgentRun } from "@/lib/agent-run-store";
 import type { MarketCard } from "@/lib/market-card";
 
 const sampleSource =
   "정부가 AI 기본법 시행령과 고영향 AI 기준을 6월 말까지 공개하는 방안을 검토하고 있다.";
 
 interface GeneratedCardWorkbenchProps {
-  onCardGenerated?: (card: MarketCard) => void;
+  onCardGenerated?: (card: MarketCard, agentRun?: AgentRun) => void;
 }
 
 export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkbenchProps) {
@@ -25,7 +26,7 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
 
     fetch("/api/generate-card")
       .then((response) => response.json())
-      .then((body: { generatedCards?: MarketCard[] }) => {
+      .then((body: { generatedCards?: MarketCard[]; agentRuns?: AgentRun[] }) => {
         if (!isMounted) return;
         setGeneratedCards(body.generatedCards ?? []);
       })
@@ -58,7 +59,7 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
 
       setActiveCard(body.card);
       setGeneratedCards(body.generatedCards ?? [body.card]);
-      onCardGenerated?.(body.card);
+      onCardGenerated?.(body.card, body.agentRun);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown generation error");
     } finally {
