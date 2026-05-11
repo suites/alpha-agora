@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Milestone 3 — Validator workflow
+Milestone 4 — Trace and reward adapters
 
 ## Status legend
 
@@ -49,11 +49,11 @@ Milestone 3 — Validator workflow
 
 ## Milestone 3 — Validator workflow
 
-- [ ] Add approve/reject/edit/comment actions
-- [ ] Persist validation state
-- [ ] Update dashboard metrics
-- [ ] Add validator board UI
-- [ ] Commit Milestone 3
+- [x] Add approve/reject/edit/comment actions
+- [x] Persist validation state
+- [x] Update dashboard metrics
+- [x] Add validator board UI
+- [x] Commit Milestone 3
 
 ## Milestone 4 — Trace and reward adapters
 

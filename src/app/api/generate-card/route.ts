@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { generateMarketCardFromSource, type GenerateCardInput } from "../../../lib/market-pipeline";
-import type { MarketCard } from "../../../lib/market-card";
-
-const generatedCards: MarketCard[] = [];
+import { listGeneratedCards, upsertGeneratedCard } from "../../../lib/market-store";
 
 export async function GET() {
-  return NextResponse.json({ generatedCards });
+  return NextResponse.json({ generatedCards: listGeneratedCards() });
 }
 
 export async function POST(request: Request) {
@@ -28,12 +26,7 @@ export async function POST(request: Request) {
     categoryHint: payload.categoryHint,
   });
 
-  const existingIndex = generatedCards.findIndex((generatedCard) => generatedCard.id === card.id);
-  if (existingIndex >= 0) {
-    generatedCards[existingIndex] = card;
-  } else {
-    generatedCards.unshift(card);
-  }
+  const generatedCards = upsertGeneratedCard(card);
 
   return NextResponse.json({ card, generatedCards }, { status: 201 });
 }

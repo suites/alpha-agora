@@ -1,4 +1,5 @@
 import { GeneratedCardWorkbench } from "@/components/generated-card-workbench";
+import { ValidatorBoard } from "@/components/validator-board";
 import {
   getDashboardMetrics,
   getFeaturedMarketCard,
@@ -133,6 +134,8 @@ export default function Home() {
         </section>
 
         <GeneratedCardWorkbench />
+
+        <ValidatorBoard />
 
         <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-black/30">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

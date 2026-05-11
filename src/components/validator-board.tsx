@@ -1,0 +1,217 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import type { MarketCard, ValidationVerdict } from "@/lib/market-card";
+import type { ValidatorMetrics } from "@/lib/validation-workflow";
+
+const defaultMetrics: ValidatorMetrics = {
+  approved: 0,
+  rejected: 0,
+  needsEdit: 0,
+  pending: 0,
+  rewardsQueuedUsdc: 0,
+};
+
+const verdictStyles: Record<ValidationVerdict, string> = {
+  APPROVE: "bg-emerald-300 text-slate-950 hover:bg-emerald-200",
+  NEEDS_EDIT: "bg-amber-300 text-slate-950 hover:bg-amber-200",
+  REJECT: "bg-rose-300 text-slate-950 hover:bg-rose-200",
+};
+
+export function ValidatorBoard() {
+  const [cards, setCards] = useState<MarketCard[]>([]);
+  const [metrics, setMetrics] = useState<ValidatorMetrics>(defaultMetrics);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [comment, setComment] = useState("Official source and deadline are clear enough for validator approval.");
+  const [editedQuestion, setEditedQuestion] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch("/api/validate-card")
+      .then((response) => response.json())
+      .then((body: { cards?: MarketCard[]; metrics?: ValidatorMetrics }) => {
+        if (!isMounted) return;
+        const boardCards = body.cards ?? [];
+        setCards(boardCards);
+        setMetrics(body.metrics ?? defaultMetrics);
+        setSelectedCardId(boardCards.find((card) => card.status !== "APPROVED")?.id ?? boardCards[0]?.id ?? null);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError("Could not load validator board.");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
+
+  async function submitVerdict(verdict: ValidationVerdict) {
+    if (!selectedCard) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/validate-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cardId: selectedCard.id,
+          validator: "HackathonValidator",
+          verdict,
+          comment,
+          editedQuestion: editedQuestion || undefined,
+        }),
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body.error ?? "Validation failed");
+      }
+
+      setCards(body.cards ?? []);
+      setMetrics(body.metrics ?? defaultMetrics);
+      setSelectedCardId(body.card.id);
+      setEditedQuestion("");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown validation error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-emerald-300/20 bg-emerald-300/[0.06] p-6 shadow-2xl shadow-emerald-950/20">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-300">
+            Human validator workflow
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold text-white">
+            Approve, reject, or request edits before reward settlement
+          </h2>
+        </div>
+        <div className="grid grid-cols-5 gap-2 text-center text-xs sm:min-w-[560px]">
+          <Metric label="Approved" value={metrics.approved} />
+          <Metric label="Rejected" value={metrics.rejected} />
+          <Metric label="Needs edit" value={metrics.needsEdit} />
+          <Metric label="Pending" value={metrics.pending} />
+          <Metric label="USDC queued" value={metrics.rewardsQueuedUsdc.toFixed(2)} />
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="max-h-[520px] space-y-3 overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+          {cards.slice(0, 12).map((card) => (
+            <button
+              key={card.id}
+              type="button"
+              onClick={() => setSelectedCardId(card.id)}
+              className={`w-full rounded-xl border p-4 text-left transition ${
+                selectedCard?.id === card.id
+                  ? "border-emerald-300/60 bg-emerald-300/10"
+                  : "border-white/10 bg-white/[0.035] hover:bg-white/[0.07]"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold text-emerald-200">
+                  {card.source.region} · {card.category}
+                </span>
+                <span className="rounded-full bg-slate-300/15 px-2 py-1 text-[11px] font-semibold text-slate-200">
+                  {card.status}
+                </span>
+              </div>
+              <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-white">{card.question}</p>
+            </button>
+          ))}
+        </div>
+
+        <article className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
+          {selectedCard ? (
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-cyan-300/15 px-3 py-1 text-xs font-semibold text-cyan-200">
+                  Score {selectedCard.scores.final}
+                </span>
+                <span className="rounded-full bg-emerald-300/15 px-3 py-1 text-xs font-semibold text-emerald-200">
+                  {selectedCard.validations.length} validations
+                </span>
+                <span className="rounded-full bg-slate-300/15 px-3 py-1 text-xs font-semibold text-slate-200">
+                  {selectedCard.status}
+                </span>
+              </div>
+              <h3 className="mt-4 text-2xl font-semibold leading-8 text-white">{selectedCard.question}</h3>
+              <p className="mt-3 text-sm leading-6 text-slate-400">{selectedCard.source.summaryEn}</p>
+
+              <label className="mt-5 block text-sm font-semibold text-slate-200" htmlFor="validator-comment">
+                Validator comment
+              </label>
+              <textarea
+                id="validator-comment"
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                rows={3}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-6 text-white outline-none ring-emerald-300/40 transition focus:ring-2"
+              />
+
+              <label className="mt-4 block text-sm font-semibold text-slate-200" htmlFor="edited-question">
+                Optional edited question
+              </label>
+              <input
+                id="edited-question"
+                value={editedQuestion}
+                onChange={(event) => setEditedQuestion(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none ring-emerald-300/40 transition focus:ring-2"
+                placeholder={selectedCard.question}
+              />
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                {(["APPROVE", "NEEDS_EDIT", "REJECT"] as ValidationVerdict[]).map((verdict) => (
+                  <button
+                    key={verdict}
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => submitVerdict(verdict)}
+                    className={`rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:bg-slate-500 ${verdictStyles[verdict]}`}
+                  >
+                    {verdict}
+                  </button>
+                ))}
+              </div>
+              {error ? <p className="mt-3 text-sm text-rose-200">{error}</p> : null}
+
+              <div className="mt-5 space-y-2">
+                {selectedCard.validations.slice(-3).map((validation, index) => (
+                  <div key={`${validation.validator}-${index}`} className="rounded-xl bg-white/[0.035] px-4 py-3 text-sm">
+                    <span className="font-semibold text-white">{validation.validator}</span>
+                    <span className="text-slate-400"> · {validation.verdict} · {validation.comment}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-80 items-center justify-center rounded-2xl border border-dashed border-white/15 text-center text-sm text-slate-400">
+              Generate a card or select a seed card to validate.
+            </div>
+          )}
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+      <p className="font-bold text-white">{value}</p>
+      <p className="mt-1 text-[11px] text-slate-400">{label}</p>
+    </div>
+  );
+}

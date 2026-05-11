@@ -106,9 +106,9 @@ Rationale: end-to-end skeleton in first 1–2 work blocks is more important than
 
 ### Milestone 3 — Validator workflow
 
-- Add validate/reject/edit/comment UI.
-- Persist validation state.
-- Update dashboard traction metrics.
+- Add validate/reject/edit/comment UI. ✅
+- Persist validation state. ✅ In-memory shared store for demo; generated and seed cards can be validated.
+- Update dashboard traction metrics. ✅ Validator board metrics show approved/rejected/needs-edit/pending/rewards queued.
 
 ### Milestone 4 — Trace and reward adapters
 
