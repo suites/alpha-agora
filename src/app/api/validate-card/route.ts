@@ -57,6 +57,20 @@ export async function POST(request: Request) {
     );
   }
 
+  if (payload.verdict === "NEEDS_EDIT" && /approval|approved|clear enough/i.test(payload.comment.trim())) {
+    return NextResponse.json(
+      { error: "edit verdict requires edit-specific rationale" },
+      { status: 400 },
+    );
+  }
+
+  if (card.validations.length > 0) {
+    return NextResponse.json(
+      { error: "card validation already finalized", message: "Create a revised Market Card for a new verdict." },
+      { status: 409 },
+    );
+  }
+
   const updatedCard = updateCard(
     applyValidationAction({
       card,

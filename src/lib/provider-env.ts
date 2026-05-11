@@ -25,6 +25,14 @@ export interface ProviderEnv {
   maxRewardUsdc: number;
 }
 
+export interface ProviderPreflight {
+  settlementPossible: boolean;
+  providers: {
+    arc: { configured: boolean; reason?: string };
+    circle: { configured: boolean; reason?: string };
+  };
+}
+
 export function getProviderEnv(env: NodeJS.ProcessEnv = process.env): ProviderEnv {
   return {
     mode: env.ALPHA_AGORA_MODE === "production" ? "production" : "demo",
@@ -66,6 +74,33 @@ export function shouldUseCircle(env = getProviderEnv()): boolean {
       env.circleTokenAddress &&
       (env.circleRecipientAddress || env.rewardRecipientAddress),
   );
+}
+
+export function getProviderPreflight(env: NodeJS.ProcessEnv = process.env): ProviderPreflight {
+  const parsed = getProviderEnv(env);
+  const arcChecks = [
+    parsed.arcRpcUrl ? null : "ARC_RPC_URL missing",
+    parsed.arcCommitterPrivateKey ? null : env.ARC_COMMITTER_PRIVATE_KEY ? "ARC_COMMITTER_PRIVATE_KEY invalid 0x64hex format" : "ARC_COMMITTER_PRIVATE_KEY missing",
+  ].filter(Boolean) as string[];
+  const circleChecks = [
+    parsed.circleApiKey ? null : "CIRCLE_API_KEY missing",
+    parsed.circleEntitySecret ? null : "CIRCLE_ENTITY_SECRET missing",
+    parsed.circleWalletAddress ? null : env.CIRCLE_WALLET_ADDRESS ? "CIRCLE_WALLET_ADDRESS invalid 0x40hex format" : "CIRCLE_WALLET_ADDRESS missing",
+    parsed.circleTokenAddress ? null : env.CIRCLE_TOKEN_ADDRESS ? "CIRCLE_TOKEN_ADDRESS invalid 0x40hex format" : "CIRCLE_TOKEN_ADDRESS missing",
+    parsed.circleRecipientAddress || parsed.rewardRecipientAddress
+      ? null
+      : env.CIRCLE_RECIPIENT_ADDRESS || env.REWARD_RECIPIENT_ADDRESS
+        ? "recipient address invalid 0x40hex format"
+        : "CIRCLE_RECIPIENT_ADDRESS or REWARD_RECIPIENT_ADDRESS missing",
+  ].filter(Boolean) as string[];
+
+  return {
+    settlementPossible: arcChecks.length === 0 && circleChecks.length === 0,
+    providers: {
+      arc: { configured: arcChecks.length === 0, reason: arcChecks[0] },
+      circle: { configured: circleChecks.length === 0, reason: circleChecks[0] },
+    },
+  };
 }
 
 export function isHexAddress(value: string | undefined): value is `0x${string}` {

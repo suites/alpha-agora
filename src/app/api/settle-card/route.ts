@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 
 import { findCard, updateCard } from "../../../lib/market-store";
+import { getProviderPreflight } from "../../../lib/provider-env";
 import { isProviderExecutionError } from "../../../lib/provider-status";
 import { settleValidatedCardWithProviders } from "../../../lib/settlement-adapters";
 
 interface SettleCardPayload {
   cardId?: string;
+}
+
+export async function GET() {
+  return NextResponse.json(getProviderPreflight());
 }
 
 export async function POST(request: Request) {

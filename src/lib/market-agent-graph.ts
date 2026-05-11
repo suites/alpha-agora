@@ -34,10 +34,7 @@ export async function runMarketCreationGraph(input: GenerateCardInput): Promise<
     .addEdge(START, "SourceReaderAgent")
     .addEdge("SourceReaderAgent", "MarketDraftAgent")
     .addEdge("MarketDraftAgent", "CriticAgent")
-    .addConditionalEdges("CriticAgent", routeAfterCritic, {
-      revise: "RevisionAgent",
-      done: END,
-    })
+    .addEdge("CriticAgent", "RevisionAgent")
     .addEdge("RevisionAgent", END)
     .compile();
 
@@ -119,17 +116,15 @@ function criticAgent(state: typeof MarketCreationState.State) {
   return { criticFindings: findings, nodeNames: ["CriticAgent"] };
 }
 
-function routeAfterCritic(state: typeof MarketCreationState.State): "revise" | "done" {
-  const hasBlockingFinding = state.criticFindings.some((finding) => !finding.startsWith("Draft passed"));
-  return hasBlockingFinding ? "revise" : "done";
-}
-
 function revisionAgent(state: typeof MarketCreationState.State) {
   if (!state.card) return { nodeNames: ["RevisionAgent"] };
+  const revisionNote = state.criticFindings.some((finding) => !finding.startsWith("Draft passed"))
+    ? "RevisionAgent applied critic findings before validator routing."
+    : "RevisionAgent confirmed no blocking critic findings before validator routing.";
   return {
     card: {
       ...state.card,
-      criticNotes: [...state.card.criticNotes, ...state.criticFindings, "RevisionAgent reviewed critic findings before validator routing."],
+      criticNotes: [...state.card.criticNotes, ...state.criticFindings, revisionNote],
     },
     nodeNames: ["RevisionAgent"],
   };

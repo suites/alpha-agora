@@ -28,7 +28,11 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
       .then((response) => response.json())
       .then((body: { generatedCards?: MarketCard[]; agentRuns?: AgentRun[] }) => {
         if (!isMounted) return;
-        setGeneratedCards(body.generatedCards ?? []);
+        const cards = body.generatedCards ?? [];
+        setGeneratedCards(cards);
+        setActiveCard((currentCard) => currentCard ?? cards[0] ?? null);
+        const latestRun = body.agentRuns?.find((run) => run.cardId === cards[0]?.id) ?? body.agentRuns?.[0];
+        if (cards[0]) onCardGenerated?.(cards[0], latestRun);
       })
       .catch(() => {
         if (!isMounted) return;
@@ -38,7 +42,7 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [onCardGenerated]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

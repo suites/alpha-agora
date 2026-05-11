@@ -121,4 +121,79 @@ describe("/api/validate-card", () => {
       error: "card already settled",
     });
   });
+
+  it("rejects contradictory verdicts after a draft receives an approval", async () => {
+    const generatedResponse = await generateCard(
+      new Request("http://localhost/api/generate-card", {
+        method: "POST",
+        body: JSON.stringify({
+          sourceText: "금융당국이 스테이블코인 가이드라인 초안을 2026년 8월까지 공개할 수 있다고 밝혔다.",
+          sourceUrl: "https://example.com/kr/stablecoin-guidance",
+          categoryHint: "Crypto Policy",
+        }),
+      }),
+    );
+    const generatedBody = await generatedResponse.json();
+
+    const approveResponse = await POST(
+      new Request("http://localhost/api/validate-card", {
+        method: "POST",
+        body: JSON.stringify({
+          cardId: generatedBody.card.id,
+          validator: "SeoulValidator",
+          verdict: "APPROVE",
+          comment: "Official source and deadline are clear enough.",
+        }),
+      }),
+    );
+    expect(approveResponse.status).toBe(200);
+
+    const editResponse = await POST(
+      new Request("http://localhost/api/validate-card", {
+        method: "POST",
+        body: JSON.stringify({
+          cardId: generatedBody.card.id,
+          validator: "SeoulValidator",
+          verdict: "NEEDS_EDIT",
+          comment: "Need stronger official-source wording before settlement.",
+        }),
+      }),
+    );
+
+    expect(editResponse.status).toBe(409);
+    await expect(editResponse.json()).resolves.toMatchObject({
+      error: "card validation already finalized",
+    });
+  });
+
+  it("requires edit-specific rationale for NEEDS_EDIT verdicts", async () => {
+    const generatedResponse = await generateCard(
+      new Request("http://localhost/api/generate-card", {
+        method: "POST",
+        body: JSON.stringify({
+          sourceText: "방송통신위원회가 플랫폼 규제 개정안을 검토하고 있다.",
+          sourceUrl: "https://example.com/kr/platform-rule",
+          categoryHint: "Platform Policy",
+        }),
+      }),
+    );
+    const generatedBody = await generatedResponse.json();
+
+    const response = await POST(
+      new Request("http://localhost/api/validate-card", {
+        method: "POST",
+        body: JSON.stringify({
+          cardId: generatedBody.card.id,
+          validator: "SeoulValidator",
+          verdict: "NEEDS_EDIT",
+          comment: "Official source and deadline are clear enough for validator approval.",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "edit verdict requires edit-specific rationale",
+    });
+  });
 });

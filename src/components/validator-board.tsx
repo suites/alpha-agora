@@ -51,6 +51,14 @@ interface SettlementResponse {
   rewardReceipts: RewardReceipt[];
 }
 
+interface SettlementPreflight {
+  settlementPossible: boolean;
+  providers: {
+    arc: { configured: boolean; reason?: string };
+    circle: { configured: boolean; reason?: string };
+  };
+}
+
 interface ValidatorBoardProps {
   refreshToken?: number;
   selectedCardId?: string | null;
@@ -65,6 +73,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
   const [editedQuestion, setEditedQuestion] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [settlement, setSettlement] = useState<SettlementResponse | null>(null);
+  const [preflight, setPreflight] = useState<SettlementPreflight | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSettling, setIsSettling] = useState(false);
 
@@ -100,12 +109,40 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
     };
   }, [refreshToken, requestedSelectedCardId, onDashboardMetricsChange]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch("/api/settle-card")
+      .then((response) => response.json())
+      .then((body: SettlementPreflight) => {
+        if (!isMounted) return;
+        setPreflight(body);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setPreflight({
+          settlementPossible: false,
+          providers: {
+            arc: { configured: false, reason: "preflight unavailable" },
+            circle: { configured: false, reason: "preflight unavailable" },
+          },
+        });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
   const selectedCardIsSettled = selectedCard ? hasSettlementProof(selectedCard) : false;
+  const selectedCardIsFinalized = selectedCard ? selectedCard.validations.length > 0 : false;
+  const settlementBlockedByPreflight = preflight ? !preflight.settlementPossible : false;
   const selectedCardSettlement = settlement?.card.id === selectedCard?.id ? settlement : null;
 
   async function submitVerdict(verdict: ValidationVerdict) {
     if (!selectedCard) return;
+    const verdictComment = commentForVerdict(verdict, comment);
 
     setIsSubmitting(true);
     setError(null);
@@ -118,7 +155,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
           cardId: selectedCard.id,
           validator: "HackathonValidator",
           verdict,
-          comment,
+          comment: verdictComment,
           editedQuestion: editedQuestion || undefined,
         }),
       });
@@ -264,7 +301,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
                   <button
                     key={verdict}
                     type="button"
-                    disabled={isSubmitting || selectedCardIsSettled}
+                    disabled={isSubmitting || selectedCardIsSettled || selectedCardIsFinalized}
                     onClick={() => submitVerdict(verdict)}
                     className={`rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:bg-slate-500 ${verdictStyles[verdict]}`}
                   >
@@ -275,6 +312,10 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
               {selectedCardIsSettled ? (
                 <p className="mt-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] px-4 py-3 text-sm leading-6 text-cyan-100">
                   This card already has settlement proof. Create a revised card for changes instead of overwriting validator history.
+                </p>
+              ) : selectedCardIsFinalized ? (
+                <p className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm leading-6 text-emerald-100">
+                  This card already has a final validator verdict. Create a revised card for contradictory approval/edit/reject changes.
                 </p>
               ) : null}
               {error ? <p className="mt-3 text-sm text-rose-200">{error}</p> : null}
@@ -291,7 +332,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
                   </div>
                   <button
                     type="button"
-                    disabled={isSettling || selectedCard.status !== "APPROVED" || selectedCardIsSettled}
+                    disabled={isSettling || selectedCard.status !== "APPROVED" || selectedCardIsSettled || settlementBlockedByPreflight}
                     onClick={settleCard}
                     className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
                   >
@@ -299,6 +340,8 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
                   </button>
                 </div>
                 <div className="mt-4 grid gap-3 text-xs md:grid-cols-2">
+                  <ReceiptLine label="Arc provider" value={preflight ? `${preflight.providers.arc.configured ? "CONFIGURED" : "UNCONFIGURED"}${preflight.providers.arc.reason ? ` · ${preflight.providers.arc.reason}` : ""}` : "checking..."} />
+                  <ReceiptLine label="Circle provider" value={preflight ? `${preflight.providers.circle.configured ? "CONFIGURED" : "UNCONFIGURED"}${preflight.providers.circle.reason ? ` · ${preflight.providers.circle.reason}` : ""}` : "checking..."} />
                   <ReceiptLine label="Trace hash" value={selectedCardSettlement?.traceReceipt.traceHash ?? selectedCard.trace.traceHash} />
                   <ReceiptLine label="Arc tx" value={selectedCardSettlement?.traceReceipt.txHash ?? selectedCard.trace.arcTxHash} />
                   <ReceiptLine label="Arc network" value={selectedCardSettlement?.traceReceipt.network ?? (selectedCard.trace.arcTxHash ? "sample-proof" : undefined)} />
@@ -327,6 +370,18 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
       </div>
     </section>
   );
+}
+
+function commentForVerdict(verdict: ValidationVerdict, currentComment: string): string {
+  const trimmed = currentComment.trim();
+  const defaultApproval = "Official source and deadline are clear enough for validator approval.";
+  if (verdict === "NEEDS_EDIT" && (!trimmed || trimmed === defaultApproval)) {
+    return "Needs a sharper resolution source, deadline, or edge-case wording before approval.";
+  }
+  if (verdict === "REJECT" && (!trimmed || trimmed === defaultApproval)) {
+    return "Rejected because the card is not resolution-ready enough for this market workflow.";
+  }
+  return trimmed;
 }
 
 function Metric({ label, value }: { label: string; value: number | string }) {

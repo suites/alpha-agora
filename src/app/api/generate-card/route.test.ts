@@ -45,6 +45,7 @@ describe("/api/generate-card", () => {
       "SourceReaderAgent",
       "MarketDraftAgent",
       "CriticAgent",
+      "RevisionAgent",
     ]);
 
     const listResponse = await GET();
