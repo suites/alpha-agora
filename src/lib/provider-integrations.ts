@@ -1,5 +1,6 @@
 import { generateMarketCardWithGemini } from "./gemini-provider";
-import { generateMarketCardFromSource, type GenerateCardInput } from "./market-pipeline";
+import { runMarketCreationGraph } from "./market-agent-graph";
+import { type GenerateCardInput } from "./market-pipeline";
 import type { MarketCard } from "./market-card";
 import { getProviderEnv } from "./provider-env";
 
@@ -13,5 +14,6 @@ export async function generateMarketCard(input: GenerateCardInput): Promise<Mark
   const geminiCard = await generateMarketCardWithGemini(input, env);
   if (geminiCard) return geminiCard;
 
-  return generateMarketCardFromSource(input);
+  const graphResult = await runMarketCreationGraph(input);
+  return graphResult.card;
 }
