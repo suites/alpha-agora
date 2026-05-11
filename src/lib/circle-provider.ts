@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { MarketCard } from "./market-card";
 import type { RewardReceipt } from "./settlement-adapters";
 import { getProviderEnv, shouldUseCircle, type ProviderEnv } from "./provider-env";
@@ -51,7 +53,7 @@ export async function settleCircleRewards(
       destinationAddress,
       amount: [validation.rewardUsdc.toFixed(2)],
       fee: { type: "level", config: { feeLevel: "MEDIUM" } },
-      idempotencyKey: `alpha-agora-${card.id}-${validation.validator}-${validation.rewardUsdc}`,
+      idempotencyKey: buildCircleIdempotencyKey(card.id, validation.validator, validation.rewardUsdc),
     });
     const providerId = response.data?.txHash ?? response.data?.transactionId ?? response.data?.id;
 
@@ -79,6 +81,14 @@ function assertRewardIsAllowed(amountUsdc: number, env: ProviderEnv): void {
   if (env.circleEnv === "production" && !env.allowMainnetTransfers) {
     throw new Error("Circle production transfers require ALLOW_MAINNET_TRANSFERS=true");
   }
+}
+
+function buildCircleIdempotencyKey(cardId: string, validator: string, rewardUsdc: number): string {
+  const bytes = Buffer.from(createHash("sha256").update(`${cardId}:${validator}:${rewardUsdc}`).digest("hex").slice(0, 32), "hex");
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 async function importCircleWallets(): Promise<CircleWalletsModule> {
