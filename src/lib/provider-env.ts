@@ -16,6 +16,7 @@ export interface ProviderEnv {
   circleEnv: "sandbox" | "production";
   circleApiKey?: string;
   circleEntitySecret?: string;
+  circleBaseUrl: string;
   circleBlockchain: string;
   circleWalletAddress?: `0x${string}`;
   circleTokenAddress?: `0x${string}`;
@@ -39,6 +40,7 @@ export function getProviderEnv(env: NodeJS.ProcessEnv = process.env): ProviderEn
     circleEnv: env.CIRCLE_ENV === "production" ? "production" : "sandbox",
     circleApiKey: optional(env.CIRCLE_API_KEY),
     circleEntitySecret: optional(env.CIRCLE_ENTITY_SECRET),
+    circleBaseUrl: optional(env.CIRCLE_BASE_URL) ?? circleBaseUrlForEnv(env.CIRCLE_ENV),
     circleBlockchain: optional(env.CIRCLE_BLOCKCHAIN) ?? "ARC-TESTNET",
     circleWalletAddress: addressFromEnv(env.CIRCLE_WALLET_ADDRESS),
     circleTokenAddress: addressFromEnv(env.CIRCLE_TOKEN_ADDRESS) ?? addressFromEnv(env.ARC_USDC_ADDRESS) ?? ARC_TESTNET_USDC_ADDRESS,
@@ -88,4 +90,8 @@ function addressFromEnv(value: string | undefined): `0x${string}` | undefined {
 function privateKeyFromEnv(value: string | undefined): `0x${string}` | undefined {
   const trimmed = optional(value);
   return trimmed && /^0x[a-fA-F0-9]{64}$/.test(trimmed) ? (trimmed as `0x${string}`) : undefined;
+}
+
+function circleBaseUrlForEnv(value: string | undefined): string {
+  return value === "production" ? "https://api.circle.com" : "https://api-sandbox.circle.com";
 }

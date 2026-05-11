@@ -6,6 +6,7 @@ interface CircleWalletsModule {
   initiateDeveloperControlledWalletsClient: (options: {
     apiKey: string;
     entitySecret: string;
+    baseUrl?: string;
   }) => {
     createTransaction: (input: {
       blockchain: string;
@@ -35,6 +36,7 @@ export async function settleCircleRewards(
   const client = initiateDeveloperControlledWalletsClient({
     apiKey: env.circleApiKey,
     entitySecret: env.circleEntitySecret,
+    baseUrl: env.circleBaseUrl,
   });
   const receipts: RewardReceipt[] = [];
 
