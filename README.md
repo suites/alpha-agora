@@ -84,6 +84,17 @@ Open http://localhost:3000.
 
 Alpha Agora uses `.env.local` as the single local environment file for both the Next.js app and Prisma CLI config. Do not create a separate `.env`; production values should live in the deployment platform environment variable settings, not in committed files.
 
+For Vercel + Supabase, the app can use the integration-provided Postgres env vars directly:
+
+- Runtime: `DATABASE_URL`, then `POSTGRES_PRISMA_URL`, then `POSTGRES_URL_NON_POOLING`, then `POSTGRES_URL`
+- Prisma migrations: `POSTGRES_URL_NON_POOLING`, then `DATABASE_URL`, then `POSTGRES_PRISMA_URL`, then `POSTGRES_URL`
+
+After connecting Supabase in Vercel, run migrations against Supabase with:
+
+```bash
+pnpm db:deploy
+```
+
 ## Verification
 
 ```bash
@@ -160,7 +171,7 @@ Local development uses `.env.local` only. Start from the committed template:
 cp .env.sample .env.local
 ```
 
-Vercel/production should use dashboard environment variables instead of checked-in env files. Missing provider credentials fall back to deterministic/mock adapters in demo mode.
+Vercel/production should use dashboard environment variables instead of checked-in env files. The Supabase integration-provided `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` values are supported without adding a separate `DATABASE_URL`. Missing provider credentials fall back to deterministic/mock adapters in demo mode.
 
 Real integrations can use:
 

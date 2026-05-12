@@ -10,9 +10,18 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: getMigrationDatabaseUrl(),
   },
 });
+
+function getMigrationDatabaseUrl() {
+  return (
+    process.env["POSTGRES_URL_NON_POOLING"] ??
+    process.env["DATABASE_URL"] ??
+    process.env["POSTGRES_PRISMA_URL"] ??
+    process.env["POSTGRES_URL"]
+  );
+}
 
 function loadEnvLocal(path = ".env.local") {
   if (!existsSync(path)) return;
