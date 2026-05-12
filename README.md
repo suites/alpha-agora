@@ -45,7 +45,7 @@ Prediction markets need more high-quality local events than English-only feeds c
 - TypeScript
 - Tailwind CSS
 - Vitest
-- In-memory demo persistence for hackathon reliability
+- Prisma-backed PostgreSQL persistence for generated cards and agent runs
 
 ## Architecture
 
@@ -107,11 +107,11 @@ pnpm build
 
 Expected current baseline:
 
-- 7 test files passing
-- 24 tests passing
+- 18 test files passing
+- 52 tests passing
 - ESLint passing
 - Next build passing
-- Dynamic routes: `/api/generate-card`, `/api/validate-card`, `/api/settle-card`
+- Dynamic routes: `/api/generate-card`, `/api/validate-card`, `/api/settle-card`, `/api/auth/google`
 
 ## Demo script
 
@@ -174,6 +174,16 @@ cp .env.sample .env.local
 ```
 
 Vercel/production should use dashboard environment variables instead of checked-in env files. The Supabase integration-provided `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` values are supported without adding a separate `DATABASE_URL`. Missing provider credentials fall back to deterministic/mock adapters in demo mode.
+
+Google validator identity is available through `/api/auth/google`. Configure these values in Vercel when using real OAuth instead of the demo fallback:
+
+```bash
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+AUTH_SECRET=
+```
+
+Set the Google OAuth redirect URI to `https://<deployment-host>/api/auth/google?action=callback`. The OAuth flow sets and verifies a short-lived CSRF `state` cookie before exchanging the Google callback code.
 
 Real integrations can use:
 

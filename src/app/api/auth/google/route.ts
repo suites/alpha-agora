@@ -1,9 +1,12 @@
+import { randomBytes } from "node:crypto";
+
 import { NextResponse } from "next/server";
 
 import { createSessionCookie, readSessionFromCookieHeader, SESSION_COOKIE_NAME, type AuthSession } from "../../../../lib/auth-session";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const OAUTH_STATE_COOKIE_NAME = "alpha_agora_oauth_state";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -20,19 +23,30 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/api/auth/google?action=demo", request.url));
   }
 
+  const state = randomBytes(32).toString("base64url");
   const authUrl = new URL(GOOGLE_AUTH_URL);
   authUrl.searchParams.set("client_id", clientId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", "openid email profile");
   authUrl.searchParams.set("prompt", "select_account");
+  authUrl.searchParams.set("state", state);
 
-  return NextResponse.redirect(authUrl);
+  const response = NextResponse.redirect(authUrl);
+  response.headers.append("Set-Cookie", buildOauthStateCookie(state, request));
+  return response;
 }
 
 async function handleGoogleCallback(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  if (!isValidOauthState(request.headers.get("cookie"), state)) {
+    const response = NextResponse.json({ error: "Google OAuth state verification failed" }, { status: 400 });
+    response.headers.append("Set-Cookie", clearOauthStateCookie(request));
+    return response;
+  }
+
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!code || !clientId || !clientSecret) {
@@ -94,6 +108,31 @@ async function handleSession(request: Request) {
 function googleRedirectUri(request: Request): string {
   const url = new URL(request.url);
   return `${url.origin}/api/auth/google?action=callback`;
+}
+
+function buildOauthStateCookie(state: string, request: Request): string {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${OAUTH_STATE_COOKIE_NAME}=${state}; Path=/api/auth/google; HttpOnly; SameSite=Lax; Max-Age=600${secure}`;
+}
+
+function clearOauthStateCookie(request: Request): string {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${OAUTH_STATE_COOKIE_NAME}=; Path=/api/auth/google; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
+}
+
+function isValidOauthState(cookieHeader: string | null, state: string | null): boolean {
+  if (!state) return false;
+  const cookieState = parseCookie(cookieHeader, OAUTH_STATE_COOKIE_NAME);
+  return cookieState === state;
+}
+
+function parseCookie(cookieHeader: string | null, name: string): string | undefined {
+  const prefix = `${name}=`;
+  return cookieHeader
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix))
+    ?.slice(prefix.length);
 }
 
 function parseGoogleIdToken(idToken: string | undefined): AuthSession | undefined {
