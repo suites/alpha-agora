@@ -87,7 +87,9 @@ Alpha Agora uses `.env.local` as the single local environment file for both the 
 For Vercel + Supabase, the app can use the integration-provided Postgres env vars directly:
 
 - Runtime: `DATABASE_URL`, then `POSTGRES_PRISMA_URL`, then `POSTGRES_URL_NON_POOLING`, then `POSTGRES_URL`
-- Prisma migrations: `POSTGRES_URL_NON_POOLING`, then `DATABASE_URL`, then `POSTGRES_PRISMA_URL`, then `POSTGRES_URL`
+- Prisma migrations: `DIRECT_URL`, then `POSTGRES_URL_NON_POOLING`, then `DATABASE_URL`, then `POSTGRES_PRISMA_URL`, then `POSTGRES_URL`
+
+This follows the Prisma/Supabase guide's pooled runtime URL + direct migration URL pattern. On Vercel, `POSTGRES_PRISMA_URL` maps to the pooled/runtime URL and `POSTGRES_URL_NON_POOLING` maps to the direct migration URL.
 
 After connecting Supabase in Vercel, run migrations against Supabase with:
 
