@@ -15,13 +15,12 @@ export default defineConfig({
 });
 
 function getMigrationDatabaseUrl() {
-  return (
-    process.env["DIRECT_URL"] ??
-    process.env["POSTGRES_URL_NON_POOLING"] ??
-    process.env["DATABASE_URL"] ??
-    process.env["POSTGRES_PRISMA_URL"] ??
-    process.env["POSTGRES_URL"]
-  );
+  for (const key of ["DIRECT_URL", "POSTGRES_URL_NON_POOLING", "DATABASE_URL", "POSTGRES_PRISMA_URL", "POSTGRES_URL"]) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+
+  return undefined;
 }
 
 function loadEnvLocal(path = ".env.local") {

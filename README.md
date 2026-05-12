@@ -91,7 +91,9 @@ For Vercel + Supabase, the app can use the integration-provided Postgres env var
 
 This follows the Prisma/Supabase guide's pooled runtime URL + direct migration URL pattern. On Vercel, `POSTGRES_PRISMA_URL` maps to the pooled/runtime URL and `POSTGRES_URL_NON_POOLING` maps to the direct migration URL.
 
-After connecting Supabase in Vercel, run migrations against Supabase with:
+Vercel builds run `prisma migrate deploy` before `prisma generate` / `next build` whenever `VERCEL=1` and one of those database URL env vars is present. This keeps generated card persistence from deploying before the `market_cards`, `agent_runs`, and `agent_steps` tables exist. Local builds skip the deploy step so `pnpm build` remains usable without a running database.
+
+After connecting Supabase in Vercel, you can also run migrations manually against Supabase with:
 
 ```bash
 pnpm db:deploy
@@ -107,8 +109,8 @@ pnpm build
 
 Expected current baseline:
 
-- 18 test files passing
-- 52 tests passing
+- 21 test files passing
+- 61 tests passing
 - ESLint passing
 - Next build passing
 - Dynamic routes: `/api/generate-card`, `/api/validate-card`, `/api/settle-card`, `/api/auth/google`
