@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import type { AgentRun } from "@/lib/agent-run-store";
+import { readJsonResponse } from "@/lib/http-json";
 import type { MarketCard } from "@/lib/market-card";
 
 const sampleSource =
@@ -25,7 +26,7 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
     let isMounted = true;
 
     fetch("/api/generate-card")
-      .then((response) => response.json())
+      .then((response) => readJsonResponse<{ generatedCards?: MarketCard[]; agentRuns?: AgentRun[] }>(response, "Could not load generated cards"))
       .then((body: { generatedCards?: MarketCard[]; agentRuns?: AgentRun[] }) => {
         if (!isMounted) return;
         const cards = body.generatedCards ?? [];
@@ -55,10 +56,17 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sourceText, sourceUrl, categoryHint }),
       });
-      const body = await response.json();
+      const body = await readJsonResponse<{ card?: MarketCard; generatedCards?: MarketCard[]; agentRun?: AgentRun; error?: string }>(
+        response,
+        "Generate Market Card failed",
+      );
 
       if (!response.ok) {
         throw new Error(body.error ?? "Failed to generate market card");
+      }
+
+      if (!body.card) {
+        throw new Error("Generate Market Card response did not include a card");
       }
 
       setActiveCard(body.card);

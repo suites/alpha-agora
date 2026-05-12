@@ -34,16 +34,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to generate card" }, { status: 502 });
   }
 
-  const generatedCards = await upsertGeneratedCardPersisted(card);
-  const agentRun = await createAgentRunForCard({
-    input: {
-      sourceText: payload.sourceText,
-      sourceUrl: payload.sourceUrl,
-      categoryHint: payload.categoryHint,
-    },
-    card,
-    provider: card.agentDecisions[0]?.agent ?? "unknown",
-  });
+  try {
+    const generatedCards = await upsertGeneratedCardPersisted(card);
+    const agentRun = await createAgentRunForCard({
+      input: {
+        sourceText: payload.sourceText,
+        sourceUrl: payload.sourceUrl,
+        categoryHint: payload.categoryHint,
+      },
+      card,
+      provider: card.agentDecisions[0]?.agent ?? "unknown",
+    });
 
-  return NextResponse.json({ card, generatedCards, agentRun }, { status: 201 });
+    return NextResponse.json({ card, generatedCards, agentRun }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to persist generated market card", error);
+    return NextResponse.json({ error: "Failed to persist generated card" }, { status: 502 });
+  }
 }
