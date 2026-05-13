@@ -6,20 +6,19 @@ import type { AgentRun } from "@/lib/agent-run-store";
 import { readJsonResponse } from "@/lib/http-json";
 import type { MarketCard } from "@/lib/market-card";
 
-const sampleSource =
-  "정부가 AI 기본법 시행령과 고영향 AI 기준을 6월 말까지 공개하는 방안을 검토하고 있다.";
-
 interface GeneratedCardWorkbenchProps {
   onCardGenerated?: (card: MarketCard, agentRun?: AgentRun) => void;
 }
 
 export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkbenchProps) {
-  const [sourceText, setSourceText] = useState(sampleSource);
-  const [sourceUrl, setSourceUrl] = useState("https://example.com/kr/ai-basic-act-update");
-  const [categoryHint, setCategoryHint] = useState("AI Policy");
+  const [sourceText, setSourceText] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [categoryHint, setCategoryHint] = useState("");
+  const [excerptLoaded, setExcerptLoaded] = useState(false);
   const [generatedCards, setGeneratedCards] = useState<MarketCard[]>([]);
   const [activeCard, setActiveCard] = useState<MarketCard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isFetchingExcerpt, setIsFetchingExcerpt] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -44,6 +43,40 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
       isMounted = false;
     };
   }, [onCardGenerated]);
+
+  async function handleFetchExcerpt() {
+    setIsFetchingExcerpt(true);
+    setError(null);
+    setExcerptLoaded(false);
+    setSourceText("");
+
+    try {
+      const response = await fetch("/api/source-excerpt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceUrl }),
+      });
+      const body = await readJsonResponse<{ sourceText?: string; sourceUrl?: string; error?: string }>(
+        response,
+        "Could not fetch source excerpt",
+      );
+
+      if (!response.ok) {
+        throw new Error(body.error ?? "Could not fetch source excerpt");
+      }
+      if (!body.sourceText) {
+        throw new Error("Source excerpt response did not include text");
+      }
+
+      setSourceText(body.sourceText);
+      setSourceUrl(body.sourceUrl ?? sourceUrl);
+      setExcerptLoaded(true);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown source fetch error");
+    } finally {
+      setIsFetchingExcerpt(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,13 +141,25 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
           <input
             id="source-url"
             value={sourceUrl}
-            onChange={(event) => setSourceUrl(event.target.value)}
+            onChange={(event) => {
+              setSourceUrl(event.target.value);
+              setExcerptLoaded(false);
+              setSourceText("");
+            }}
             className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none ring-cyan-300/40 transition focus:ring-2"
-            placeholder="https://local-news.example/article"
+            placeholder="https://news.example/article"
           />
+          <button
+            type="button"
+            disabled={isFetchingExcerpt || sourceUrl.trim().length === 0}
+            onClick={handleFetchExcerpt}
+            className="w-full rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-5 py-3 text-sm font-bold text-cyan-100 transition hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400"
+          >
+            {isFetchingExcerpt ? "Fetching source..." : "Fetch source excerpt"}
+          </button>
 
           <label className="block text-sm font-semibold text-slate-200" htmlFor="category-hint">
-            Category hint
+            Category hint (optional)
           </label>
           <input
             id="category-hint"
@@ -131,14 +176,15 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
             id="source-text"
             value={sourceText}
             onChange={(event) => setSourceText(event.target.value)}
+            disabled={!excerptLoaded}
             rows={7}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-6 text-white outline-none ring-cyan-300/40 transition focus:ring-2"
-            placeholder="Paste Korean, Japanese, or Chinese source text..."
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-6 text-white outline-none ring-cyan-300/40 transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-900 disabled:text-slate-500"
+            placeholder="Fetch a source URL to review and edit the extracted local-language excerpt."
           />
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !excerptLoaded || sourceText.trim().length === 0 || sourceUrl.trim().length === 0}
             className="w-full rounded-xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-500"
           >
             {isSubmitting ? "Generating..." : "Generate Market Card"}
@@ -195,7 +241,7 @@ export function GeneratedCardWorkbench({ onCardGenerated }: GeneratedCardWorkben
             </div>
           ) : (
             <div className="flex min-h-80 items-center justify-center rounded-2xl border border-dashed border-white/15 text-center text-sm text-slate-400">
-              Submit a source excerpt to generate the first draft card.
+              Submit a reachable source URL to generate the first draft card.
             </div>
           )}
         </article>

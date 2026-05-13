@@ -51,14 +51,23 @@ const draftCard: MarketCard = {
 describe("/api/generate-card persistence failures", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.resetModules();
     vi.doUnmock("../../../lib/provider-integrations");
     vi.doUnmock("../../../lib/market-store");
     vi.doUnmock("../../../lib/agent-run-store");
+    vi.doUnmock("../../../lib/source-fetcher");
   });
 
   it("returns a JSON error when card persistence fails after generation", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.doMock("../../../lib/source-fetcher", () => ({
+      fetchSourceExcerpt: vi.fn(async () => ({
+        sourceUrl: "https://example.com/kr/ai-policy",
+        sourceText: "정부가 AI 기본법 시행령과 고영향 AI 기준을 공개하는 방안을 검토하고 있다.",
+      })),
+      assertLocalLanguageSourceText: vi.fn(),
+    }));
 
     vi.doMock("../../../lib/provider-integrations", () => ({
       generateMarketCard: vi.fn(async () => draftCard),

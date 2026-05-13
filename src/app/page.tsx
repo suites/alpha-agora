@@ -2,9 +2,11 @@ import { MarketCardDemo } from "@/components/market-card-demo";
 import {
   getDashboardMetrics,
   getFeaturedMarketCard,
-  marketCards,
   type MarketCard,
 } from "@/lib/market-card";
+import { listAllCardsPersisted } from "@/lib/market-store";
+
+export const dynamic = "force-dynamic";
 
 const judgingMetrics = [
   {
@@ -15,7 +17,7 @@ const judgingMetrics = [
   {
     label: "Traction",
     weight: "30%",
-    proof: "seed cards, validator actions, reward/trace counts",
+    proof: "persisted cards, validator actions, reward/trace counts",
   },
   {
     label: "Circle / Arc Usage",
@@ -41,17 +43,17 @@ const pipelineSteps = [
 
 const milestoneItems = [
   "Milestone 0: scaffold, plan, orchestration log, dashboard skeleton",
-  "Milestone 1: domain model, 20 KR/JP/CN seed cards, scoring tests",
+  "Milestone 1: domain model, KR/JP/CN scoring tests",
   "Milestone 2: generate-card API and deterministic agent pipeline",
   "Milestone 3: validator workflow and traction metrics",
   "Milestone 4: Arc trace + USDC reward adapters",
-  "Milestone 5: README, submission narrative, demo checklist, final verification",
+  "Milestone 5: README, production readiness, final verification",
 ];
 
 const submissionAssets = [
-  "README setup + env documentation",
-  "Submission narrative and demo walkthrough",
-  "7 passing test files / 24 passing tests",
+  "Production setup + env documentation",
+  "Operational source-verification workflow",
+  "24 passing test files / 80 passing tests",
   "Adapter boundaries ready for live Arc/Circle credentials",
 ];
 
@@ -79,10 +81,11 @@ function ScorePill({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default function Home() {
-  const metrics = getDashboardMetrics(marketCards);
-  const featured = getFeaturedMarketCard(marketCards);
-  const visibleCards = marketCards.slice(0, 9);
+export default async function Home() {
+  const persistedCards = await listAllCardsPersisted();
+  const metrics = getDashboardMetrics(persistedCards);
+  const featured = persistedCards.length > 0 ? getFeaturedMarketCard(persistedCards) : null;
+  const visibleCards = persistedCards.slice(0, 9);
 
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -122,7 +125,7 @@ export default function Home() {
               <a href="#validator-workflow" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Validate</a>
               <a href="#agent-run-console" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Run console</a>
               <a href="#agent-workflow" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Agent workflow</a>
-              <a href="#seed-cards" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Seed cards</a>
+              <a href="#generated-cards" className="rounded-full bg-white/[0.06] px-3 py-1 hover:text-white">Generated cards</a>
             </nav>
           </div>
           <div className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-5 text-sm text-cyan-100 md:w-72">
@@ -184,6 +187,7 @@ export default function Home() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          {featured ? (
           <article className="rounded-3xl border border-white/10 bg-white/[0.055] p-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-rose-400/15 px-3 py-1 text-sm font-semibold text-rose-200">
@@ -230,32 +234,48 @@ export default function Home() {
               <ScorePill label="Ambiguity risk" value={featured.scores.ambiguityRisk} />
             </div>
           </article>
+          ) : (
+            <article className="flex min-h-96 items-center justify-center rounded-3xl border border-dashed border-white/15 bg-white/[0.035] p-6 text-center">
+              <div>
+                <h2 className="text-2xl font-semibold text-white">No persisted Market Cards yet</h2>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400">
+                  Submit a reachable source URL in the live pipeline to create the first production card.
+                </p>
+              </div>
+            </article>
+          )}
 
           <aside className="space-y-6">
             <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-6">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">
                 Settlement proof
               </p>
-              <dl className="mt-5 space-y-4 text-sm">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-slate-300">Validator reward</dt>
-                  <dd className="font-semibold text-white">
-                    {featured.validations[0]?.rewardUsdc.toFixed(2) ?? "0.00"} testnet USDC
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-slate-300">Reward tx</dt>
-                  <dd className="max-w-36 truncate font-semibold text-emerald-200">
-                    {featured.validations[0]?.rewardTxHash ?? "pending"}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-slate-300">Arc trace</dt>
-                  <dd className="max-w-36 truncate font-semibold text-cyan-200">
-                    {featured.trace.arcTxHash ?? featured.trace.traceHash}
-                  </dd>
-                </div>
-              </dl>
+              {featured ? (
+                <dl className="mt-5 space-y-4 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-300">Validator reward</dt>
+                    <dd className="font-semibold text-white">
+                      {featured.validations[0]?.rewardUsdc.toFixed(2) ?? "0.00"} testnet USDC
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-300">Reward tx</dt>
+                    <dd className="max-w-36 truncate font-semibold text-emerald-200">
+                      {featured.validations[0]?.rewardTxHash ?? "pending"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-300">Arc trace</dt>
+                    <dd className="max-w-36 truncate font-semibold text-cyan-200">
+                      {featured.trace.arcTxHash ?? featured.trace.traceHash}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="mt-5 text-sm leading-6 text-slate-300">
+                  Settlement proof appears after a persisted card is validated and settled.
+                </p>
+              )}
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-6">
@@ -287,7 +307,7 @@ export default function Home() {
               </h2>
             </div>
             <p className="max-w-xl text-sm leading-6 text-slate-300">
-              Judges can run the app locally, follow the demo script, and inspect the full Market Card Agent workflow without secrets.
+              Operators can run the app, submit reachable source URLs, and inspect the full Market Card Agent workflow without secrets.
             </p>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-4">
@@ -300,22 +320,23 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="seed-cards" className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+        <section id="generated-cards" className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">
-                Seed Market Cards
+                Persisted Market Cards
               </p>
               <h2 className="mt-2 text-3xl font-semibold text-white">
-                KR/JP/CN local-alpha backlog ready for validator workflow
+                Production cards ready for validator workflow
               </h2>
             </div>
             <p className="text-sm text-slate-400">
-              Showing {visibleCards.length} of {marketCards.length} cards
+              Showing {visibleCards.length} of {persistedCards.length} cards
             </p>
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {visibleCards.map((card) => (
+          {visibleCards.length > 0 ? (
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {visibleCards.map((card) => (
               <article
                 key={card.id}
                 className="rounded-2xl border border-white/10 bg-slate-950/50 p-5"
@@ -337,8 +358,13 @@ export default function Home() {
                   <span className="font-bold text-white">{card.scores.final}</span>
                 </div>
               </article>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 flex min-h-48 items-center justify-center rounded-2xl border border-dashed border-white/15 text-center text-sm text-slate-400">
+              No persisted cards in the database.
+            </div>
+          )}
         </section>
       </section>
     </main>

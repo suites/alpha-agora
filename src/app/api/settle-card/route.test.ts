@@ -1,10 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../../lib/source-fetcher", () => ({
+  fetchSourceExcerpt: vi.fn(async () => ({
+    sourceUrl: "https://example.com/cn/chip-response",
+    sourceText: "政府が半導体輸出管理への対応策を正式発表する可能性がある。",
+  })),
+  assertLocalLanguageSourceText: vi.fn(),
+}));
 
 import { POST as generateCard } from "../generate-card/route";
 import { POST as validateCard } from "../validate-card/route";
 import { GET as settlementPreflight, POST as settleCard } from "./route";
 
 describe("/api/settle-card", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("exposes non-secret provider preflight before settlement", async () => {
     const response = await settlementPreflight();
 

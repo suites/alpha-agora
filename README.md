@@ -1,6 +1,6 @@
 # Alpha Agora — Market Card Agent
 
-Alpha Agora is a submission-ready Agora Agents Hackathon project that turns non-English local alpha into resolution-ready prediction market cards.
+Alpha Agora is a production-oriented Market Card Agent that turns reachable non-English source URLs into resolution-ready prediction market cards.
 
 It is **not** a prediction market venue and **not** an AI trading bot. It is an upstream Market Card Agent that helps prediction market teams discover, score, validate, and trace new market candidates from Korean, Japanese, and Chinese sources.
 
@@ -22,15 +22,15 @@ Prediction markets need more high-quality local events than English-only feeds c
 | Criterion | Alpha Agora proof |
 | --- | --- |
 | Agentic Sophistication 30% | Deterministic multi-step pipeline: source reader → region/language inference → marketability scorer → question generator → resolution rule builder → critic/trace |
-| Traction 30% | 20 seeded KR/JP/CN market cards, generated cards, validator workflow, dashboard metrics, settlement counts |
+| Traction 30% | Persisted Supabase/Postgres cards only, validator workflow, dashboard metrics, settlement counts |
 | Circle / Arc Usage 20% | USDC reward adapter boundary and Arc TraceRegistry adapter boundary with testnet-compatible mock receipts |
 | Innovation 20% | Creates prediction-market-ready supply from non-English local alpha instead of building another trading bot |
 
 ## Current features
 
-- Market Card domain model with 20 realistic seed cards
-- `/api/generate-card` deterministic agent pipeline for source text/URL input
-- Live generation workbench in the dashboard
+- Production URL-only source intake: `/api/source-excerpt` fetches and extracts a local-language excerpt before card generation
+- `/api/generate-card` requires a reachable `sourceUrl`, validates the URL again before generation, and persists cards to PostgreSQL
+- Dashboard and validator board read only persisted Supabase/Postgres data; seed/fixture cards are not exposed in the product UI
 - Human validator board for approve/reject/needs-edit/comment/edit-question actions
 - `/api/validate-card` validation state workflow
 - Reasoning trace JSON builder and SHA-256 trace hash
@@ -50,7 +50,13 @@ Prediction markets need more high-quality local events than English-only feeds c
 ## Architecture
 
 ```text
-Non-English event/source
+Reachable non-English source URL
+  → /api/source-excerpt
+      validate public http/https URL
+      fetch HTML/plain text with timeout and size limits
+      extract local-language excerpt for operator review
+  → /api/generate-card
+      revalidate reachable source URL
   → market-pipeline.ts
       infer region/language
       generate market question
@@ -70,7 +76,7 @@ Non-English event/source
   → /api/settle-card
 ```
 
-The current Arc/Circle implementations are intentionally mock/testnet-compatible adapter boundaries so the demo works without secrets. Real RPC/provider integration can replace `commitTraceToArc` and `settleValidatorRewards` without changing the product flow.
+The Arc/Circle integrations can run in production when their credentials are configured. If provider credentials are intentionally omitted, the adapter boundary can return deterministic/testnet-compatible receipts for local development only.
 
 ## Setup
 
@@ -111,39 +117,47 @@ pnpm build
 
 Expected current baseline:
 
-- 22 test files passing
-- 63 tests passing
+- 24 test files passing
+- 80 tests passing
 - ESLint passing
 - Next build passing
-- Dynamic routes: `/api/generate-card`, `/api/validate-card`, `/api/settle-card`, `/api/auth/google`
+- Dynamic routes: `/`, `/api/source-excerpt`, `/api/generate-card`, `/api/validate-card`, `/api/settle-card`, `/api/auth/google`
 
-## Demo script
+## Production smoke test
 
 1. Open the dashboard
-2. Show the top judging cards: Agentic Sophistication, Traction, Circle/Arc Usage, Innovation
-3. In **Generate Market Card**, paste a Korean/Japanese/Chinese local event excerpt and click `Generate Market Card`
-4. Show the generated card preview, agent decisions, resolution rules, and draft trace hash
-5. In **Human validator workflow**, select a draft/validating card
-6. Click `APPROVE` with a validator comment
-7. Click `Commit trace + pay rewards`
-8. Point out:
-   - SHA-256 reasoning trace hash
-   - mock Arc tx hash
-   - `arc-testnet-mock` network
-   - mock USDC reward tx hash
-9. Explain that real Arc/Circle providers plug into the existing adapter boundary
+2. In **Source URL**, paste a reachable Korean/Japanese/Chinese article URL
+3. Click `Fetch source excerpt`
+4. Review/edit the enabled **Local-language source excerpt** textarea
+5. Click `Generate Market Card`
+6. Refresh the page and confirm the persisted card still appears
+7. In **Human validator workflow**, sign in with Google, approve/reject/needs-edit the persisted card, then settle when providers are configured
+
+The product does not expose seed cards in the dashboard. Empty Supabase/Postgres storage shows an empty state until real generated cards are persisted.
 
 ## API routes
+
+### `POST /api/source-excerpt`
+
+```json
+{
+  "sourceUrl": "https://publisher.example/local-source"
+}
+```
+
+Fetches a public `http`/`https` URL, rejects local/private/internal targets, limits response size/time, extracts readable text from HTML/plain text, and returns an editable local-language excerpt.
 
 ### `POST /api/generate-card`
 
 ```json
 {
-  "sourceText": "Local non-English event excerpt...",
-  "sourceUrl": "https://example.com/local-source",
+  "sourceUrl": "https://publisher.example/local-source",
+  "sourceText": "Optional reviewed local-language excerpt returned by /api/source-excerpt...",
   "categoryHint": "Elections"
 }
 ```
+
+`sourceUrl` is required and must be reachable. `sourceText` is accepted only after URL validation; if omitted, the server uses the fetched excerpt.
 
 ### `POST /api/validate-card`
 
@@ -177,9 +191,9 @@ Local development uses `.env.local` only. Start from the committed template:
 cp .env.sample .env.local
 ```
 
-Vercel/production should use dashboard environment variables instead of checked-in env files. The Supabase integration-provided `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` values are supported without adding a separate `DATABASE_URL`. Missing provider credentials fall back to deterministic/mock adapters in demo mode.
+Vercel/production should use dashboard environment variables instead of checked-in env files. The Supabase integration-provided `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` values are supported without adding a separate `DATABASE_URL`. Configure real provider credentials for production settlement/OAuth flows; omitted provider credentials should be treated as local-development only.
 
-Google validator identity is available through `/api/auth/google`. Configure these values in Vercel when using real OAuth instead of the demo fallback:
+Google validator identity is available through `/api/auth/google`. Configure these values in Vercel for real OAuth:
 
 ```bash
 GOOGLE_CLIENT_ID=

@@ -403,7 +403,7 @@ export function ValidatorBoard({ refreshToken = 0, selectedCardId: requestedSele
             </div>
           ) : (
             <div className="flex min-h-80 items-center justify-center rounded-2xl border border-dashed border-white/15 text-center text-sm text-slate-400">
-              Generate a card or select a seed card to validate.
+              Generate a persisted card to validate.
             </div>
           )}
         </article>

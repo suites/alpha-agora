@@ -24,6 +24,16 @@ function restoreEnv(name: "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET", value: st
 }
 
 describe("/api/auth/google", () => {
+  it("fails closed instead of creating a demo validator when Google OAuth is not configured", async () => {
+    delete process.env.GOOGLE_CLIENT_ID;
+    delete process.env.GOOGLE_CLIENT_SECRET;
+
+    const response = await GET(new Request("http://localhost/api/auth/google"));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: "Google OAuth is not configured" });
+  });
+
   it("starts Google OAuth with a CSRF state cookie and matching state parameter", async () => {
     setGoogleOAuthEnv();
 

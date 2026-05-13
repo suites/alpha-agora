@@ -57,9 +57,15 @@ describe("persistent market store", () => {
     expect(found?.trace.arcNetwork).toBe("arc-testnet");
   });
 
-  it("keeps seed cards available alongside persisted generated cards", async () => {
+  it("returns only DB-persisted cards in production list/find APIs", async () => {
     await resetGeneratedCardsForTests();
     const allCards = await listAllCardsPersisted();
-    expect(allCards.some((card) => card.id === marketCards[0].id)).toBe(true);
+    expect(allCards).toEqual([]);
+
+    const seedCard = await findCardPersisted(marketCards[0].id);
+    expect(seedCard).toBeUndefined();
+
+    await upsertGeneratedCardPersisted(testCard);
+    await expect(listAllCardsPersisted()).resolves.toEqual([testCard]);
   });
 });

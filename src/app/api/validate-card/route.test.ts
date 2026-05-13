@@ -1,10 +1,32 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../../lib/source-fetcher", () => ({
+  fetchSourceExcerpt: vi.fn(async () => ({
+    sourceUrl: "https://example.com/jp/ev-subsidy",
+    sourceText: "政府が電気自動車向け補助金制度の延長を検討している。",
+  })),
+  assertLocalLanguageSourceText: vi.fn(),
+}));
 
 import { GET, POST } from "./route";
 import { POST as generateCard } from "../generate-card/route";
 import { findCardPersisted, updateCardPersisted } from "../../../lib/market-store";
 
 describe("/api/validate-card", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(
+        "정부가 AI 기본법 시행령과 고영향 AI 기준을 공개하는 방안을 검토하고 있다.",
+        { status: 200, headers: { "content-type": "text/plain" } },
+      )),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("returns 404 for an unknown card", async () => {
     const response = await POST(
       new Request("http://localhost/api/validate-card", {
@@ -37,7 +59,6 @@ describe("/api/validate-card", () => {
       new Request("http://localhost/api/generate-card", {
         method: "POST",
         body: JSON.stringify({
-          sourceText: "政府が電気自動車向け補助金制度の延長を検討している。",
           sourceUrl: "https://example.com/jp/ev-subsidy",
           categoryHint: "EV Policy",
         }),
@@ -73,7 +94,6 @@ describe("/api/validate-card", () => {
       new Request("http://localhost/api/generate-card", {
         method: "POST",
         body: JSON.stringify({
-          sourceText: "서울시가 심야 자율주행버스 확대 여부를 공식 위원회 안건으로 상정할 예정이다.",
           sourceUrl: "https://example.com/kr/night-bus",
           categoryHint: "Transportation",
         }),
@@ -127,7 +147,6 @@ describe("/api/validate-card", () => {
       new Request("http://localhost/api/generate-card", {
         method: "POST",
         body: JSON.stringify({
-          sourceText: "금융당국이 스테이블코인 가이드라인 초안을 2026년 8월까지 공개할 수 있다고 밝혔다.",
           sourceUrl: "https://example.com/kr/stablecoin-guidance",
           categoryHint: "Crypto Policy",
         }),
@@ -171,7 +190,6 @@ describe("/api/validate-card", () => {
       new Request("http://localhost/api/generate-card", {
         method: "POST",
         body: JSON.stringify({
-          sourceText: "방송통신위원회가 플랫폼 규제 개정안을 검토하고 있다.",
           sourceUrl: "https://example.com/kr/platform-rule",
           categoryHint: "Platform Policy",
         }),

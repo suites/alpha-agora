@@ -15,12 +15,11 @@ export async function GET(request: Request) {
   if (action === "callback") return handleGoogleCallback(request);
   if (action === "logout") return handleLogout(request);
   if (action === "session") return handleSession(request);
-  if (action === "demo") return handleDemoLogin(request);
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = googleRedirectUri(request);
   if (!clientId) {
-    return NextResponse.redirect(new URL("/api/auth/google?action=demo", request.url));
+    return NextResponse.json({ error: "Google OAuth is not configured" }, { status: 503 });
   }
 
   const state = randomBytes(32).toString("base64url");
@@ -75,17 +74,6 @@ async function handleGoogleCallback(request: Request) {
     return NextResponse.json({ error: "Google identity token missing required profile fields" }, { status: 502 });
   }
 
-  const response = NextResponse.redirect(new URL("/", request.url));
-  response.headers.append("Set-Cookie", await createSessionCookie(session));
-  return response;
-}
-
-async function handleDemoLogin(request: Request) {
-  const session: AuthSession = {
-    email: "demo.validator@alpha-agora.local",
-    name: "Demo Google Validator",
-    provider: "google",
-  };
   const response = NextResponse.redirect(new URL("/", request.url));
   response.headers.append("Set-Cookie", await createSessionCookie(session));
   return response;

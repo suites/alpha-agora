@@ -12,7 +12,7 @@ export function AgentRunConsole({ run }: AgentRunConsoleProps) {
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-violet-300">Agent Run Console</p>
           <h2 className="mt-2 text-3xl font-semibold text-white">Every market card keeps its decision trace</h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
-            The demo shows each node output instead of hiding the agent behind a single generated answer: input, output, confidence, rationale, and tool calls are persisted per run.
+            Each node output is shown instead of hiding the agent behind a single generated answer: input, output, confidence, rationale, and tool calls are persisted per run.
           </p>
         </div>
         {run ? (
