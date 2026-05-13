@@ -116,6 +116,36 @@ describe("source fetcher URL safety", () => {
     expect(excerpt.sourceText).not.toContain("ignore()");
   });
 
+  it("prefers the news article body over page chrome, widgets, and related-link noise", async () => {
+    requestFixtures.responses.push({
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" },
+      body: `
+        <html>
+          <head><meta property="og:title" content="SK하이닉스·삼성전자, 낙폭 딛고 급반등"></head>
+          <body>
+            <div class="translator_widget">Translated by kakao i 한국어 English 日本語</div>
+            <div class="article_view">
+              <section>
+                <p><strong>SK하이닉스 장중 197만3000원까지 껑충</strong></p>
+                <p>SK하이닉스와 삼성전자가 장 초반 약세를 딛고 나란히 반등에 성공했다.</p>
+                <p>메모리 업황 개선 기대감이 주가 하단을 떠받치는 모양새다.</p>
+              </section>
+            </div>
+            <ul class="related_news"><li>해킹 청구서에 희비 엇갈린 통신3사…올해는 AI DC로 수익성 드라이브</li></ul>
+          </body>
+        </html>
+      `,
+    });
+
+    const excerpt = await fetchSourceExcerpt("https://v.daum.net/v/20260513142501045");
+
+    expect(excerpt.sourceText).toContain("SK하이닉스·삼성전자, 낙폭 딛고 급반등");
+    expect(excerpt.sourceText).toContain("메모리 업황 개선 기대감");
+    expect(excerpt.sourceText).not.toContain("Translated by kakao");
+    expect(excerpt.sourceText).not.toContain("AI DC로 수익성 드라이브");
+  });
+
   it("fails before generation when a source URL is unreachable", async () => {
     requestFixtures.responses.push({ status: 404, body: "missing", headers: { "content-type": "text/plain" } });
 

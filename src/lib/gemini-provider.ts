@@ -66,6 +66,9 @@ function buildPrompt(input: GenerateCardInput): string {
     constraints: [
       "Use only regions KR, JP, or CN.",
       "Use only source languages ko, ja, or zh.",
+      "Ground every extracted event, category, and question in the provided sourceText; do not invent unrelated policy topics.",
+      "If categoryHint is empty, infer the category from sourceText only. Do not default to AI Policy unless the source is actually about AI policy, AI regulation, or AI guidance.",
+      "For stock-market or company share-price articles, draft a market about the named securities and their next relevant trading-day outcome, not about government policy.",
       "Question must start with Will and end with a question mark.",
       "Resolution must include an ISO endDate, timezone, official sources, and edge cases.",
       "Scores must be integers from 0 to 100 and include ambiguityRisk where lower is better.",

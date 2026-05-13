@@ -58,4 +58,27 @@ describe("market pipeline", () => {
     expect(japanCard.source.language).toBe("ja");
     expect(japanCard.id).not.toBe(koreaCard.id);
   });
+
+  it("classifies semiconductor stock articles before incidental AI text", () => {
+    const card = generateMarketCardFromSource({
+      sourceUrl: "https://v.daum.net/v/20260513142501045",
+      sourceText:
+        "SK하이닉스와 삼성전자가 장 초반 약세를 딛고 나란히 반등에 성공했다. 메모리 업황 개선 기대감이 주가 하단을 떠받치는 모양새다. 관련 추천뉴스에는 AI DC 문구가 있을 수 있다.",
+    });
+
+    expect(card.category).toBe("Semiconductors");
+    expect(card.question).toContain("SK Hynix and Samsung Electronics");
+    expect(card.question).not.toContain("AI policy");
+  });
+
+  it("keeps generic semiconductor sources from becoming SK Hynix/Samsung-specific", () => {
+    const card = generateMarketCardFromSource({
+      sourceUrl: "https://example.com/jp/chip-demand",
+      sourceText: "日本の半導体装置メーカーが需要回復を受けて生産計画を見直す可能性がある。",
+    });
+
+    expect(card.category).toBe("Semiconductors");
+    expect(card.question).toContain("semiconductor market event");
+    expect(card.question).not.toContain("SK Hynix");
+  });
 });

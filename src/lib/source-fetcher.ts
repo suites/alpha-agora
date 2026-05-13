@@ -217,14 +217,46 @@ async function readBodyWithLimit(response: SourceResponse): Promise<string> {
 
 function extractReadableText(body: string, contentType: string): string {
   const text = contentType === "text/html" || contentType === "application/xhtml+xml"
-    ? body
-        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-        .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
+    ? htmlToReadableText(extractArticleCandidateHtml(body))
     : body;
 
   return decodeBasicEntities(text).replace(/\s+/g, " ").trim().slice(0, EXCERPT_CHARS);
+}
+
+function extractArticleCandidateHtml(body: string): string {
+  const title = firstHtmlCapture(body, [
+    /<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+    /<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["'][^>]*>/i,
+    /<h1\b[^>]*>([\s\S]*?)<\/h1>/i,
+    /<h2\b[^>]*>([\s\S]*?)<\/h2>/i,
+    /<h3\b[^>]*class=["'][^"']*tit_view[^"']*["'][^>]*>([\s\S]*?)<\/h3>/i,
+  ]);
+  const articleBody = firstHtmlCapture(body, [
+    /<div\b[^>]*class=["'][^"']*article_view[^"']*["'][^>]*>[\s\S]*?<section\b[^>]*>([\s\S]*?)<\/section>/i,
+    /<article\b[^>]*id=["']mArticle["'][^>]*>([\s\S]*?)<\/article>/i,
+    /<article\b[^>]*>([\s\S]*?)<\/article>/i,
+  ]);
+
+  if (articleBody) return `${title ? `${title} ` : ""}${articleBody}`;
+  return body;
+}
+
+function firstHtmlCapture(body: string, patterns: RegExp[]): string {
+  for (const pattern of patterns) {
+    const match = body.match(pattern)?.[1]?.trim();
+    if (match) return match;
+  }
+  return "";
+}
+
+function htmlToReadableText(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<figcaption\b[^>]*>[\s\S]*?<\/figcaption>/gi, " ")
+    .replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
 }
 
 function decodeBasicEntities(text: string): string {

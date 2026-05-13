@@ -143,10 +143,10 @@ function normalizeSourceText(sourceText: string): string {
 
 function inferCategory(text: string): string {
   const lower = text.toLowerCase();
-  if (/ai|인공지능|人工知能|人工智能/.test(lower)) return "AI Policy";
+  if (/반도체|半導体|芯片|chip|hbm|sk하이닉스|삼성전자|semiconductor/.test(lower)) return "Semiconductors";
   if (/crypto|token|가상자산|暗号資産|加密/.test(lower)) return "Crypto Policy";
+  if (/인공지능|人工知能|人工智能|ai\s*(policy|guidance|regulation|법|기본법|규제|가이드라인)/.test(lower)) return "AI Policy";
   if (/日銀|boj|한국은행|央行|pboc|금리|国債|汇率/.test(lower)) return "Macro";
-  if (/반도체|半導体|芯片|chip|hbm/.test(lower)) return "Semiconductors";
   if (/게임|ゲーム|游戏/.test(lower)) return "Gaming / Internet";
   if (/전기차|ev|자동차|新能源|電気自動車/.test(lower)) return "EV Policy";
   return "Local Policy";
@@ -163,6 +163,12 @@ function buildSourceTitle(text: string, region: Region): string {
 
 function buildQuestionSubject(text: string, category: string, region: Region): string {
   const country = region === "KR" ? "South Korea" : region === "JP" ? "Japan" : "China";
+  if (/sk하이닉스|삼성전자/i.test(text)) {
+    return "SK Hynix and Samsung Electronics close higher on the next Korea Exchange trading day than their reported source-article prices";
+  }
+  if (/반도체|semiconductor/i.test(`${category} ${text}`)) {
+    return `${country} officially confirm the reported semiconductor market event`;
+  }
   if (/AI|인공지능|人工知能|人工智能/.test(`${category} ${text}`)) {
     return `${country} publish official AI policy guidance`;
   }
