@@ -8,7 +8,7 @@ const requestFixtures = vi.hoisted(() => ({
 }));
 
 function mockNodeRequest(protocol: "http:" | "https:") {
-  return vi.fn((options: { hostname?: string; path?: string; lookup?: (hostname: string | undefined, options: object, callback: (error: Error | null) => void) => void }, callback: (response: Readable & { statusCode?: number; headers?: Record<string, string> }) => void) => {
+  return vi.fn((options: { hostname?: string; path?: string; lookup?: (hostname: string | undefined, options: { all: boolean }, callback: (error: Error | null, address?: string | Array<{ address: string; family: number }>, family?: number) => void) => void }, callback: (response: Readable & { statusCode?: number; headers?: Record<string, string> }) => void) => {
     requestFixtures.calls.push({ protocol, hostname: options.hostname, path: options.path });
     const listeners = new Map<string, (error?: Error) => void>();
     const request = {
@@ -17,9 +17,14 @@ function mockNodeRequest(protocol: "http:" | "https:") {
         return request;
       },
       end() {
-        options.lookup?.(options.hostname, {}, (error: Error | null) => {
+        options.lookup?.(options.hostname, { all: true }, (error: Error | null, address?: string | Array<{ address: string; family: number }>) => {
           if (error) {
             listeners.get("error")?.(error);
+            listeners.get("close")?.();
+            return;
+          }
+          if (!Array.isArray(address) || address.length === 0) {
+            listeners.get("error")?.(new Error("mock lookup did not return address array"));
             listeners.get("close")?.();
             return;
           }

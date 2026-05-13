@@ -144,14 +144,24 @@ function sourceRequestHeaders(url: URL): Record<string, string> {
   };
 }
 
-function validatedLookup(hostname: string, options: unknown, callback: (error: Error | null, address: string, family: number) => void): void {
-  void options;
+function validatedLookup(
+  hostname: string,
+  options: { all?: boolean } | undefined,
+  callback: (error: Error | null, address: string | Array<{ address: string; family: number }>, family?: number) => void,
+): void {
   lookup(hostname, { all: true, verbatim: true })
     .then((addresses) => {
       if (addresses.length === 0) throw new Error("sourceUrl hostname could not be resolved");
-      for (const { address } of addresses) assertPublicIpLiteral(address);
-      const selected = addresses[0];
-      callback(null, selected.address, selected.family ?? isIP(selected.address));
+      const publicAddresses = addresses.map(({ address, family }) => {
+        assertPublicIpLiteral(address);
+        return { address, family: family ?? isIP(address) };
+      });
+      if (options?.all) {
+        callback(null, publicAddresses);
+        return;
+      }
+      const selected = publicAddresses[0];
+      callback(null, selected.address, selected.family);
     })
     .catch((error) => callback(error instanceof Error ? error : new Error("sourceUrl hostname could not be resolved"), "", 0));
 }
